@@ -305,11 +305,25 @@ export function App() {
           </>
         ) : (
           <CompareView
+            traces={filteredTraces}
+            traceAId={compareTraceAId}
+            traceBId={compareTraceBId}
             eventsA={compareTraceAId ? (groupedTraceEvents.get(compareTraceAId) ?? []) : []}
             eventsB={compareTraceBId ? (groupedTraceEvents.get(compareTraceBId) ?? []) : []}
             summaryA={compareTraceAId ? summaryByTraceId.get(compareTraceAId) : undefined}
             summaryB={compareTraceBId ? summaryByTraceId.get(compareTraceBId) : undefined}
             viewMode={viewMode}
+            onSetCompareA={setCompareTraceAId}
+            onSetCompareB={setCompareTraceBId}
+            onSwap={() => {
+              const temp = compareTraceAId;
+              setCompareTraceAId(compareTraceBId);
+              setCompareTraceBId(temp);
+            }}
+            onReset={() => {
+              setCompareTraceAId(undefined);
+              setCompareTraceBId(undefined);
+            }}
           />
         )}
       </main>

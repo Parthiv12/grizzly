@@ -1295,3 +1295,340 @@ body {
 .trace-node-unique.trace-node-error {
   box-shadow: 0 0 0 2px rgba(228, 87, 87, 0.6), 0 4px 24px rgba(228, 87, 87, 0.2);
 }
+
+/* Advanced Trace ID Copy Styling */
+.graph-caption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 13px;
+  color: #8c9eb9;
+}
+
+.caption-method {
+  font-weight: 600;
+  color: #cfdcf0;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.caption-duration {
+  color: #a2b7d6;
+}
+
+.trace-id-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(63, 80, 110, 0.3);
+  border-radius: 6px;
+  color: #9cb4db;
+  font-size: 11.5px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  cursor: pointer;
+  transition: all 150ms var(--ease-quick);
+}
+
+.trace-id-copy:hover {
+  background: rgba(44, 62, 90, 0.6);
+  border-color: rgba(81, 109, 150, 0.6);
+  color: #fff;
+}
+
+.trace-id-copy.copied {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.copy-text {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* Compare View Overrides */
+.compare-hero {
+  padding: 32px 40px;
+  border-bottom: 1px solid var(--line);
+  background: radial-gradient(circle at top left, color-mix(in oklch, var(--accent) 15%, transparent) 0%, transparent 100%);
+}
+
+.compare-hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.compare-title {
+  margin: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.compare-hero-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.button-secondary {
+  background: rgba(44, 62, 90, 0.6);
+  color: #cfdcf0;
+  border-color: rgba(81, 109, 150, 0.6);
+  height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: rgba(59, 82, 119, 0.8);
+  color: #fff;
+}
+
+.button-danger {
+  background: rgba(228, 87, 87, 0.1);
+  color: #f8aaaa;
+  border-color: rgba(228, 87, 87, 0.3);
+  height: 38px;
+  padding: 0 16px;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: rgba(228, 87, 87, 0.2);
+  color: #ffc4c4;
+  border-color: rgba(228, 87, 87, 0.5);
+}
+
+.compare-select {
+  flex: 1;
+  max-width: 480px;
+  height: 36px;
+  font-size: 13px;
+  background: rgba(14, 21, 31, 0.6);
+  border-color: rgba(63, 80, 110, 0.5);
+  color: #e5efff;
+}
+
+.compare-empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  color: #728baf;
+  padding: 40px;
+}
+
+.compare-empty-state h3 {
+  color: #e5efff;
+  margin: 16px 0 8px;
+  font-size: 18px;
+}
+
+.compare-badge-large {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  border-radius: 12px;
+  opacity: 0.8;
+}
+
+/* Enhanced Trace Explorer List */
+.trace-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trace-row {
+  border-radius: 8px;
+  padding: 14px 16px;
+  border: 1px solid rgba(63, 80, 110, 0.2);
+  background: rgba(14, 21, 31, 0.4);
+  transition: all 150ms var(--ease-quick);
+  cursor: pointer;
+  text-align: left;
+}
+
+.trace-row:hover {
+  background: rgba(33, 46, 66, 0.4);
+  border-color: rgba(63, 80, 110, 0.4);
+  transform: translateY(-1px);
+}
+
+.trace-row-active {
+  background: rgba(44, 62, 90, 0.4);
+  border-color: rgba(139, 168, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.trace-row-error {
+  border-left: 3px solid var(--error);
+}
+
+.trace-row-success {
+  border-left: 3px solid transparent;
+}
+
+/* Premium Empty State Styling for Span Inspector */
+.inspector-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding: 40px 24px !important;
+  text-align: center !important;
+  color: var(--muted) !important;
+}
+
+.inspector-empty-icon {
+  margin-bottom: 20px !important;
+  color: #516d96 !important;
+  background: rgba(33, 46, 66, 0.4) !important;
+  padding: 20px !important;
+  border-radius: 16px !important;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+.inspector-empty .empty-title {
+  margin: 0 0 10px !important;
+  color: #cfdcf0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.inspector-empty .empty-desc {
+  margin: 0 !important;
+  color: #728baf !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  max-width: 260px !important;
+}
+
+/* Compare Mode Combobox */
+.trace-combo {
+  position: relative;
+  flex: 1;
+  max-width: 520px;
+}
+
+.trace-combo-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.trace-combo-input {
+  width: 100%;
+  padding-right: 36px;
+  background: rgba(14, 21, 31, 0.6);
+  border-color: rgba(63, 80, 110, 0.4);
+}
+
+.trace-combo-icon {
+  position: absolute;
+  right: 12px;
+  color: #728baf;
+  pointer-events: none;
+  transition: transform 150ms var(--ease-quick);
+}
+
+.trace-combo-icon.open {
+  transform: rotate(180deg);
+}
+
+.trace-combo-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: #111a28;
+  border: 1px solid rgba(63, 80, 110, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.trace-combo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #cfdcf0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms var(--ease-quick);
+}
+
+.trace-combo-item:hover:not(:disabled) {
+  background: rgba(44, 62, 90, 0.5);
+}
+
+.trace-combo-item.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #fff;
+}
+
+.trace-combo-item:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.combo-item-method {
+  font-weight: 700;
+  font-size: 11px;
+  color: #9cb4db;
+  min-width: 44px;
+}
+
+.combo-item-route {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.combo-item-id {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  color: #728baf;
+}
+
+.trace-combo-empty {
+  padding: 12px;
+  font-size: 12px;
+  color: #728baf;
+  text-align: center;
+}
+
+/* Fix flex height for react-flow in compare mode */
+.compare-graph-container .graph-panel {
+  flex: 1;
+  border-right: none;
+  border-bottom: none;
+  background: transparent;
+  border-radius: 0;
+}

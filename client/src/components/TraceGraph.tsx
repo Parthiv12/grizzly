@@ -60,6 +60,14 @@ const nodeTypes = { traceNode: TraceNode };
 
 export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave }: TraceGraphProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | undefined>();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyTraceId = () => {
+    if (!summary?.traceId) return;
+    navigator.clipboard.writeText(summary.traceId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const { ancestorIds, descendantIds } = useMemo(() => {
     const parents = new Map<string, string[]>();
@@ -145,12 +153,30 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
       <div className="panel-header">
         <h2>Trace Graph</h2>
         {summary ? (
-          <p className="graph-caption">
+          <div className="graph-caption">
             <span className={`view-mode-badge ${viewMode === 'business' ? 'view-mode-business' : 'view-mode-infra'}`}>
               {viewMode === 'business' ? 'Business Mode' : 'Infra Mode'}
-            </span>{' '}
-            {summary.method} {summary.route} • {formatDuration(summary.durationMs)} • {shortTraceId(summary.traceId)}
-          </p>
+            </span>
+            <span className="caption-method">{summary.method} {summary.route}</span>
+            <span className="caption-duration">{formatDuration(summary.durationMs)}</span>
+            <button 
+              type="button" 
+              className={`trace-id-copy ${copied ? 'copied' : ''}`}
+              onClick={handleCopyTraceId}
+              title="Copy Trace ID"
+              aria-label="Copy trace ID"
+            >
+              <span>{shortTraceId(summary.traceId)}</span>
+              {copied ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span className="copy-text">Copied</span>
+                </>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              )}
+            </button>
+          </div>
         ) : null}
       </div>
 
