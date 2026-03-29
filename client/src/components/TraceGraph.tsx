@@ -13,6 +13,7 @@ interface TraceGraphProps {
   mostlyInfraTrace: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  onNodeHover?: (nodeId?: string) => void;
 }
 
 interface TraceNodeData {
@@ -21,7 +22,8 @@ interface TraceNodeData {
   isInfra?: boolean;
   faded?: boolean;
   highlighted?: boolean;
-  comparisonState?: 'shared' | 'unique' | 'none';
+  comparisonState?: 'identical' | 'changed' | 'unique' | 'none';
+  diffInfo?: any;
 }
 
 function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
@@ -36,20 +38,33 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
     data.isMainPath ? 'trace-node-main' : '',
     data.isInfra ? 'trace-node-infra' : '',
     data.faded ? 'trace-node-faded' : '',
-    data.comparisonState === 'shared' ? 'trace-node-shared' : '',
+    data.comparisonState === 'identical' ? 'trace-node-identical' : '',
+    data.comparisonState === 'changed' ? 'trace-node-changed' : '',
     data.comparisonState === 'unique' ? 'trace-node-unique' : ''
   ].filter(Boolean).join(' ');
+
+  const d = data.diffInfo;
 
   return (
     <div className={classNames}>
       <Handle type="target" position={Position.Left} className="trace-handle" />
       <div className="trace-node-header">
         <span className="trace-node-layer">{span.layer}</span>
+        {d?.isDivergencePoint && <span className="diff-divergence-pill" title="Execution paths branch from here">Diverged</span>}
         <span className={`status-pill ${span.status === 'error' ? 'status-error' : 'status-success'}`}>{span.status}</span>
       </div>
       <p className="trace-node-step">{span.step}</p>
-      <p className="trace-node-meta">
-        <span className="node-duration-meta">{formatDuration(span.durationMs)}</span> • {formatTime(span.timestamp)}
+      <p className="trace-node-meta" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span className="node-duration-meta">{formatDuration(span.durationMs)}</span>
+        
+        {d?.durationDiffMs && Math.abs(d.durationDiffMs) > 2 ? (
+           <span className={`diff-duration-pill ${d.durationDiffMs > 0 ? 'slower' : 'faster'}`} title={d.durationDiffMs > 0 ? 'Slower than matched span' : 'Faster than matched span'}>
+             {d.durationDiffMs > 0 ? '+' : ''}{d.durationDiffMs}ms
+           </span>
+        ) : null}
+        
+        <span>•</span>
+        <span>{formatTime(span.timestamp)}</span>
       </p>
       <Handle type="source" position={Position.Right} className="trace-handle" />
     </div>
@@ -205,7 +220,19 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
           minZoom={0.25}
           maxZoom={1.75}
         >
-          <MiniMap zoomable pannable nodeStrokeWidth={2} style={{ background: '#0f141d' }} />
+          <MiniMap 
+            zoomable 
+            pannable 
+            nodeStrokeWidth={2} 
+            style={{ backgroundColor: '#111827' }} 
+            maskColor="rgba(0,0,0,0.6)" 
+            nodeColor={(n) => {
+              if (n.data?.isInfra) return '#1f2937';
+              if (n.data?.comparisonState === 'unique') return '#3b82f6';
+              if (n.data?.comparisonState === 'changed') return '#eab308';
+              return '#374151';
+            }} 
+          />
           <Controls showInteractive={false} />
           <Background gap={18} size={1} color="#1f2734" />
         </ReactFlow>

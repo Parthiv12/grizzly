@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import type { RawTraceEvent, TraceSummary, TraceViewMode } from '../types/trace';
 import { createSpanView, createGraph } from '../utils/trace-transform';
+import { computeTraceDiff, getTopChangedSpan, generateHumanReadableExplanation, type SpanDiffInfo } from '../utils/trace-diff';
 import { TraceGraph } from './TraceGraph';
 import { formatDuration, formatTime } from '../utils/format';
 
@@ -105,41 +106,39 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
   const spansA = useMemo(() => createSpanView(eventsA, viewMode), [eventsA, viewMode]);
   const spansB = useMemo(() => createSpanView(eventsB, viewMode), [eventsB, viewMode]);
 
-  const { nodesA, edgesA, nodesB, edgesB, diffSummary } = useMemo(() => {
+  const [hoveredSpanId, setHoveredSpanId] = useState<string>();
+
+  const { nodesA, edgesA, nodesB, edgesB, diffSummary, diffResult } = useMemo(() => {
     const gA = createGraph(spansA);
     const gB = createGraph(spansB);
 
-    const matchSpan = (span: any, otherSpans: any[]) => {
-      // Basic heuristic: same layer and step means they are "the same" conceptual node.
-      return otherSpans.some(os => os.layer === span.layer && os.step === span.step);
-    };
+    const diffResult = computeTraceDiff(spansA, spansB);
 
-    let aUnique = 0;
-    let bUnique = 0;
-
-    const enhanceNodes = (nodes: any[], spans: any[], otherSpans: any[], isA: boolean) => {
-      if (spans.length === 0 || otherSpans.length === 0) return nodes;
+    const enhanceNodes = (nodes: any[], diffs: Record<string, SpanDiffInfo>) => {
       return nodes.map(n => {
-        const span = spans.find(s => s.id === n.id);
-        if (!span) return n;
-        const shared = matchSpan(span, otherSpans);
+        const d = diffs[n.id];
+        if (!d) return n;
         
-        if (!shared) {
-          if (isA) aUnique++; else bUnique++;
-        }
-
         return {
           ...n,
           data: {
             ...n.data,
-            comparisonState: shared ? 'shared' : 'unique'
+            comparisonState: d.state, // 'identical', 'changed', 'unique'
+            diffInfo: d
           }
         };
       });
     };
 
-    const enhancedA = enhanceNodes(gA.nodes, spansA, spansB, true);
-    const enhancedB = enhanceNodes(gB.nodes, spansB, spansA, false);
+    const enhancedA = enhanceNodes(gA.nodes, diffResult.aDiffs);
+    const enhancedB = enhanceNodes(gB.nodes, diffResult.bDiffs);
+    
+    const { aOnlyCount: aUnique, bOnlyCount: bUnique, changedCount } = diffResult.metrics;
+    const explanationParts = summaryA && summaryB ? generateHumanReadableExplanation(
+       diffResult, spansA, spansB, summaryA.durationMs, summaryB.durationMs, summaryA.health, summaryB.health
+    ) : [];
+    
+    const topChanged = getTopChangedSpan(diffResult, spansA);
 
     let diffSummaryNode = (
       <p className="compare-subtitle">Select two traces from the dropdowns below or the sidebar to begin topological comparison.</p>
@@ -152,28 +151,47 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
       const isHealthError = summaryA.health === 'error' || summaryB.health === 'error';
       
       diffSummaryNode = (
-        <div className="diff-stats-bar">
-          <div className={`diff-stat ${isStatusDiff || isHealthError ? 'diff-stat-warning' : ''}`}>
-             <span className="diff-label">Outcome</span>
-             <span className="diff-value">{summaryA.health.toUpperCase()} vs {summaryB.health.toUpperCase()}</span>
+        <>
+          <div className="diff-stats-bar">
+            <div className={`diff-stat ${isStatusDiff || isHealthError ? 'diff-stat-warning' : ''}`}>
+               <span className="diff-label">Outcome</span>
+               <span className="diff-value">{summaryA.health.toUpperCase()} vs {summaryB.health.toUpperCase()}</span>
+            </div>
+            <div className="diff-stat">
+               <span className="diff-label">Speed diff</span>
+               <span className="diff-value">Trace {faster} was {formatDuration(durationDiff)} faster</span>
+            </div>
+            <div className={`diff-stat ${aUnique > 0 || bUnique > 0 || changedCount > 0 ? 'diff-stat-divergent' : 'diff-stat-identical'}`}>
+               <span className="diff-label">Topology</span>
+               <span className="diff-value">
+                 {aUnique > 0 || bUnique > 0 
+                   ? `${aUnique} unique A, ${bUnique} unique B, ${changedCount} changed`
+                   : (changedCount > 0
+                      ? `${changedCount} shared spans changed`
+                      : `Identical Execution Paths`)}
+               </span>
+            </div>
+            <div className="diff-stat">
+               <span className="diff-label">Span count</span>
+               <span className="diff-value">{spansA.length} vs {spansB.length} spans</span>
+            </div>
           </div>
-          <div className="diff-stat">
-             <span className="diff-label">Speed diff</span>
-             <span className="diff-value">Trace {faster} was {formatDuration(durationDiff)} faster</span>
-          </div>
-          <div className={`diff-stat ${aUnique > 0 || bUnique > 0 ? 'diff-stat-divergent' : 'diff-stat-identical'}`}>
-             <span className="diff-label">Topology</span>
-             <span className="diff-value">
-               {aUnique > 0 || bUnique > 0 
-                 ? `${aUnique} unique A spans, ${bUnique} unique B spans`
-                 : `Identical Execution Paths`}
-             </span>
-          </div>
-          <div className="diff-stat">
-             <span className="diff-label">Span count</span>
-             <span className="diff-value">{spansA.length} vs {spansB.length} spans</span>
-          </div>
-        </div>
+          
+          {explanationParts.length > 0 && (
+            <div className="diff-explanations">
+              {explanationParts.map((part, i) => (
+                <p key={i} className="diff-explanation-text">• {part}</p>
+              ))}
+              {topChanged && (
+                 <p className="diff-explanation-text diff-explanation-highlight">
+                   • Top Change: <span className="diff-val">{topChanged.spanA.step}</span> 
+                   {Math.abs(topChanged.diffInfo.durationDiffMs || 0) > 2 ? ` (${topChanged.diffInfo.durationDiffMs! > 0 ? '+' : ''}${topChanged.diffInfo.durationDiffMs}ms)` : ''}
+                   {topChanged.diffInfo.statusChanged && ' (Status flipped)'}
+                 </p>
+              )}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -182,9 +200,28 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
       edgesA: gA.edges,
       nodesB: enhancedB,
       edgesB: gB.edges,
-      diffSummary: diffSummaryNode
+      diffSummary: diffSummaryNode,
+      diffResult
     };
-  }, [spansA, spansB, summaryA, summaryB]);
+  }, [eventsA, eventsB, summaryA, summaryB, viewMode]);
+
+  const displayNodesA = useMemo(() => {
+    if (!hoveredSpanId || !diffResult) return nodesA;
+    const pairedId = diffResult.aDiffs[hoveredSpanId]?.pairedSpanId || diffResult.bDiffs[hoveredSpanId]?.pairedSpanId;
+    return nodesA.map(n => ({
+      ...n,
+      data: { ...n.data, faded: n.id !== hoveredSpanId && n.id !== pairedId, highlighted: n.id === hoveredSpanId || n.id === pairedId }
+    }));
+  }, [nodesA, hoveredSpanId, diffResult]);
+
+  const displayNodesB = useMemo(() => {
+    if (!hoveredSpanId || !diffResult) return nodesB;
+    const pairedId = diffResult.aDiffs[hoveredSpanId]?.pairedSpanId || diffResult.bDiffs[hoveredSpanId]?.pairedSpanId;
+    return nodesB.map(n => ({
+      ...n,
+      data: { ...n.data, faded: n.id !== hoveredSpanId && n.id !== pairedId, highlighted: n.id === hoveredSpanId || n.id === pairedId }
+    }));
+  }, [nodesB, hoveredSpanId, diffResult]);
 
   return (
     <div className="compare-workspace">
@@ -217,12 +254,13 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
           </div>
           {traceAId ? (
             <TraceGraph
-              nodes={nodesA}
+              nodes={displayNodesA}
               edges={edgesA}
               onSelectNode={() => {}}
+              onNodeHover={setHoveredSpanId}
               summary={summaryA}
               viewMode={viewMode}
-              mostlyInfraTrace={viewMode === 'business' && eventsA.length > 0 && spansA.length === 0}
+              mostlyInfraTrace={viewMode === 'business' && eventsA.length > 0 && nodesA.length === 0}
             />
           ) : (
             <div className="compare-empty-state">
@@ -245,12 +283,13 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
           </div>
           {traceBId ? (
             <TraceGraph
-              nodes={nodesB}
+              nodes={displayNodesB}
               edges={edgesB}
               onSelectNode={() => {}}
+              onNodeHover={setHoveredSpanId}
               summary={summaryB}
               viewMode={viewMode}
-              mostlyInfraTrace={viewMode === 'business' && eventsB.length > 0 && spansB.length === 0}
+              mostlyInfraTrace={viewMode === 'business' && eventsB.length > 0 && nodesB.length === 0}
             />
           ) : (
             <div className="compare-empty-state">
