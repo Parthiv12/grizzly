@@ -166,29 +166,99 @@ export function createSpanView(traceEvents: RawTraceEvent[], viewMode: TraceView
 export function createGraph(spans: SpanViewModel[]): { nodes: Node[]; edges: Edge[] } {
   const layerRowCount: Record<string, number> = {};
 
+  const stack: SpanViewModel[] = [];
+  const parentOf = new Map<string, string>();
+
+  for (const span of spans) {
+    const lInd = LAYER_ORDER[span.layer] ?? 0;
+    while (stack.length > 0) {
+      const top = stack[stack.length - 1];
+      const topInd = LAYER_ORDER[top.layer] ?? 0;
+      if (topInd < lInd) {
+        break;
+      }
+      stack.pop();
+    }
+    if (stack.length > 0) {
+      parentOf.set(span.id, stack[stack.length - 1].id);
+    }
+    stack.push(span);
+  }
+
+  const depth = new Map<string, number>();
+  let maxDepth = -1;
+  let deepestSpanId = '';
+
+  for (const span of spans) {
+    const parentId = parentOf.get(span.id);
+    const d = parentId ? (depth.get(parentId) ?? 0) + 1 : 0;
+    depth.set(span.id, d);
+
+    if (d > maxDepth) {
+      maxDepth = d;
+      deepestSpanId = span.id;
+    }
+  }
+
+  const mainPath = new Set<string>();
+  let curr: string | undefined = deepestSpanId;
+  while (curr) {
+    mainPath.add(curr);
+    curr = parentOf.get(curr);
+  }
+
+  spans.forEach((s) => {
+    const l = s.layer;
+    layerRowCount[l] = (layerRowCount[l] ?? 0) + 1;
+  });
+  const maxRows = Math.max(...Object.values(layerRowCount), 0);
+
+  const NODE_GAP_Y = 160;
+  const LAYER_GAP_X = 350;
+
+  const currentLayerRow: Record<string, number> = {};
+
   const nodes: Node[] = spans.map((span) => {
     const layerX = LAYER_ORDER[span.layer] ?? 0;
-    const layerRow = layerRowCount[span.layer] ?? 0;
-    layerRowCount[span.layer] = layerRow + 1;
+    const lStr = span.layer;
+    const row = currentLayerRow[lStr] ?? 0;
+    currentLayerRow[lStr] = row + 1;
+
+    const layerTotal = layerRowCount[lStr] ?? 1;
+    const yOffset = ((maxRows - layerTotal) * NODE_GAP_Y) / 2;
+
+    const isInfra = classifySpan(span) === 'infra';
+    const inMainPath = mainPath.has(span.id);
 
     return {
       id: span.id,
       position: {
-        x: LAYER_GAP_X * layerX,
-        y: NODE_GAP_Y * layerRow
+        x: layerX * LAYER_GAP_X + (isInfra ? 32 : 0),
+        y: row * NODE_GAP_Y + yOffset
       },
-      data: { span },
+      data: { span, isMainPath: inMainPath, isInfra },
       type: 'traceNode'
     };
   });
 
-  const edges: Edge[] = spans.slice(1).map((span, index) => ({
-    id: `edge-${index}`,
-    source: spans[index].id,
-    target: span.id,
-    animated: spans[index].status === 'error' || span.status === 'error',
-    style: { stroke: '#52607a', strokeWidth: 1.4, opacity: 0.9 }
-  }));
+  const edges: Edge[] = spans
+    .filter((span) => parentOf.has(span.id))
+    .map((span) => {
+      const parentId = parentOf.get(span.id)!;
+      const isMainPath = mainPath.has(span.id) && mainPath.has(parentId);
+
+      return {
+        id: `edge-${parentId}-${span.id}`,
+        source: parentId,
+        target: span.id,
+        type: 'default',
+        animated: isMainPath,
+        data: { isMainPath },
+        style: isMainPath
+          ? { stroke: '#96b8ff', strokeWidth: 3, opacity: 1 }
+          : { stroke: '#46536b', strokeWidth: 1.5, opacity: 0.3 }
+      };
+    });
 
   return { nodes, edges };
 }
