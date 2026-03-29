@@ -27,6 +27,9 @@ async function handleCheckoutRequest(
   handler: (meta: SpanMeta) => Promise<{ status: number; body: any }>
 ) {
   const meta: SpanMeta = {
+    layer: 'controller',
+    resource: 'checkout_router',
+    operation: 'request',
     httpMethod: req.method,
     httpUrl: req.originalUrl,
     httpRoute: routePath
@@ -48,3 +51,25 @@ async function handleCheckoutRequest(
     res.status(500).json({ error: error?.message ?? 'Internal server error' });
   }
 }
+
+checkoutRouter.get('/orders', async (req: Request, res: Response) => {
+  const meta: SpanMeta = {
+    layer: 'controller',
+    resource: 'checkout_router',
+    operation: 'request_orders',
+    httpMethod: req.method,
+    httpUrl: req.originalUrl,
+    httpRoute: '/orders'
+  };
+
+  try {
+    const orders = await checkoutService.getRecentOrders();
+    const span = trace.getActiveSpan();
+    if (span) {
+       res.setHeader('x-trace-id', span.spanContext().traceId);
+    }
+    res.status(200).json(orders);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});

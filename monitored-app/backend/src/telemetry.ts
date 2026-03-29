@@ -27,7 +27,16 @@ export async function startTelemetry() {
     resource: resourceFromAttributes({
       [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'monitored-ecommerce'
     }),
-    instrumentations: [getNodeAutoInstrumentations()]
+    instrumentations: [getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-http': {
+        ignoreIncomingRequestHook: (req: any) => {
+          // Ignore health checks and our new 2s auto-polling 
+          // so we don't spam the TraceLens dashboard with noise!
+          const url = req.url || '';
+          return url.includes('/health') || url.includes('/orders');
+        }
+      }
+    })]
   });
 
   await sdk.start();

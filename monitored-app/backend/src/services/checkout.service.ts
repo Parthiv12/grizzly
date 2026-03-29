@@ -5,6 +5,8 @@ import { paymentService } from './payment.service';
 import { shippingService } from './shipping.service';
 
 class CheckoutService {
+  private orders: any[] = [];
+
   async processCheckout(body: CheckoutRequest, meta: SpanMeta): Promise<{ orderId: string, status: string }> {
     return withBusinessSpan('process_checkout', {
       layer: 'service',
@@ -40,6 +42,14 @@ class CheckoutService {
            span.setAttribute('stripe.transaction', charge.transactionId);
         }
 
+        this.orders.unshift({
+          id: orderId,
+          status: 'Completed',
+          total: (150.0 + shipping.rate).toFixed(2),
+          items: cartTotalItems,
+          date: new Date().toISOString()
+        });
+
         return { orderId, status: 'Success! Order placed.' };
       } catch (err: any) {
         // Attach explicit bug tag so it renders easily in TraceLens
@@ -51,6 +61,13 @@ class CheckoutService {
         throw err;
       }
     });
+  }
+
+  async getRecentOrders() {
+    // We intentionally DO NOT wrap this in a span, so the 2-second UI polling 
+    // doesn't spam the TraceLens presentation with 100s of 'fetch_recent_orders' traces!
+    await new Promise(r => setTimeout(r, 15)); 
+    return this.orders.slice(0, 5);
   }
 }
 

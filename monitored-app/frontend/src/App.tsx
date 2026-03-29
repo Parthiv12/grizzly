@@ -18,6 +18,7 @@ type CartItem = {
 export function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   
   const [forceInventoryFailure, setForceInventoryFailure] = useState(false);
   const [forcePaymentLatency, setForcePaymentLatency] = useState(false);
@@ -37,7 +38,22 @@ export function App() {
 
   useEffect(() => {
     loadProducts();
+    loadOrders();
+
+    // Auto-refresh orders every 2 seconds so Postman changes instantly appear in UI
+    const interval = setInterval(() => {
+      loadOrders();
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  async function loadOrders() {
+    try {
+      const resp = await fetch('/api/checkout/orders');
+      if (resp.ok) setRecentOrders(await resp.json());
+    } catch (e) {}
+  }
 
   async function loadProducts() {
     setLoading(true);
@@ -96,6 +112,7 @@ export function App() {
 
       setSuccess('Successfully placed order!');
       clearCart();
+      loadOrders();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -133,7 +150,7 @@ export function App() {
       </header>
 
       <main className="layout-grid" style={{ gridTemplateColumns: '1fr 360px', alignItems: 'stretch' }}>
-        <section className="panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column' }}>
+        <section className="panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
              <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#0f172a', margin: 0 }}>Developer Swag Store</h2>
              <button type="button" className="button" onClick={loadProducts} disabled={loading}>
@@ -211,6 +228,27 @@ export function App() {
             <p style={{ textAlign: 'center', margin: '14px 0 0', fontSize: '13px', color: '#94a3b8' }}>
               Submitting checkout will generate a massive trace!
             </p>
+
+            {recentOrders.length > 0 && (
+              <div style={{ marginTop: '32px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '16px' }}>Recent Orders</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {recentOrders.map(order => (
+                    <div key={order.id} style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{order.id}</span>
+                        <span style={{ color: '#10b981', fontWeight: 600 }}>${order.total}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                        <span>{order.items} items</span>
+                        <span>{new Date(order.date).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         </aside>
       </main>
@@ -270,7 +308,22 @@ export function App() {
       )}
 
       {error ? <div className="toast-error">🚨 {error}</div> : null}
-      {success ? <div className="toast-error" style={{ background: '#dcfce7', color: '#16a34a', borderColor: '#86efac' }}>✅ {success}</div> : null}
+      {success ? (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '20px' }}>
+          <div className="panel" style={{ width: '100%', maxWidth: '440px', padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: '64px', height: '64px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '20px' }}>
+              🎉
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>Order Confirmed!</h2>
+            <p style={{ color: '#64748b', margin: '0 0 24px', lineHeight: 1.5 }}>
+              Your trace has successfully propagated through the microservices.
+            </p>
+            <button type="button" className="button button-primary" style={{ padding: '12px 24px', fontSize: '16px', fontWeight: 600, borderRadius: '8px' }} onClick={() => setSuccess(null)}>
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
