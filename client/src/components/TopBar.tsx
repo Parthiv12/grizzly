@@ -81,14 +81,14 @@ export function TopBar({
               className={`mode-chip ${viewMode === 'business' ? 'mode-chip-active' : ''}`}
               onClick={() => onViewModeChange('business')}
             >
-              Business Mode
+              Logical Flow
             </button>
             <button
               type="button"
               className={`mode-chip ${viewMode === 'infra' ? 'mode-chip-active' : ''}`}
               onClick={() => onViewModeChange('infra')}
             >
-              Infra Mode
+              Raw Spans
             </button>
           </div>
         </div>

@@ -241,6 +241,13 @@ export function createGraph(spans: SpanViewModel[]): { nodes: Node[]; edges: Edg
     };
   });
 
+  const rails: Node[] = [
+    { id: 'rail-controller', position: { x: 0 * LAYER_GAP_X + 10, y: -60 }, data: { label: 'CONTROLLER' }, type: 'layerLabel', draggable: false, selectable: false },
+    { id: 'rail-service', position: { x: 1 * LAYER_GAP_X + 10, y: -60 }, data: { label: 'SERVICE' }, type: 'layerLabel', draggable: false, selectable: false },
+    { id: 'rail-repository', position: { x: 2 * LAYER_GAP_X + 10, y: -60 }, data: { label: 'REPOSITORY' }, type: 'layerLabel', draggable: false, selectable: false },
+    { id: 'rail-database', position: { x: 3 * LAYER_GAP_X + 10, y: -60 }, data: { label: 'DATABASE' }, type: 'layerLabel', draggable: false, selectable: false },
+  ];
+
   const edges: Edge[] = spans
     .filter((span) => parentOf.has(span.id))
     .map((span) => {
@@ -260,7 +267,7 @@ export function createGraph(spans: SpanViewModel[]): { nodes: Node[]; edges: Edg
       };
     });
 
-  return { nodes, edges };
+  return { nodes: [...rails, ...nodes], edges };
 }
 
 function numberFromMetadata(metadata: Record<string, unknown> | undefined, key: string): number | undefined {

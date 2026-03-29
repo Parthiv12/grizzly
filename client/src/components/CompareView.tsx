@@ -141,17 +141,40 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
     const enhancedA = enhanceNodes(gA.nodes, spansA, spansB, true);
     const enhancedB = enhanceNodes(gB.nodes, spansB, spansA, false);
 
-    let summaryText = `Select two traces to compare execution paths.`;
+    let diffSummaryNode = (
+      <p className="compare-subtitle">Select two traces from the dropdowns below or the sidebar to begin topological comparison.</p>
+    );
+
     if (summaryA && summaryB) {
-      if (summaryA.health === 'success' && summaryB.health !== 'success') {
-        summaryText = `Trace B failed to complete the path relative to Trace A.`;
-      } else if (summaryB.health === 'success' && summaryA.health !== 'success') {
-        summaryText = `Trace A failed to complete the path relative to Trace B.`;
-      } else if (aUnique === 0 && bUnique === 0) {
-        summaryText = `Identical topological execution paths. Time diff: ${Math.abs(summaryA.durationMs - summaryB.durationMs)}ms.`;
-      } else {
-        summaryText = `Trace A has ${aUnique} unique nodes. Trace B has ${bUnique} unique nodes.`;
-      }
+      const durationDiff = Math.abs(summaryA.durationMs - summaryB.durationMs);
+      const faster = summaryA.durationMs <= summaryB.durationMs ? 'A' : 'B';
+      const isStatusDiff = summaryA.health !== summaryB.health;
+      const isHealthError = summaryA.health === 'error' || summaryB.health === 'error';
+      
+      diffSummaryNode = (
+        <div className="diff-stats-bar">
+          <div className={`diff-stat ${isStatusDiff || isHealthError ? 'diff-stat-warning' : ''}`}>
+             <span className="diff-label">Outcome</span>
+             <span className="diff-value">{summaryA.health.toUpperCase()} vs {summaryB.health.toUpperCase()}</span>
+          </div>
+          <div className="diff-stat">
+             <span className="diff-label">Speed diff</span>
+             <span className="diff-value">Trace {faster} was {formatDuration(durationDiff)} faster</span>
+          </div>
+          <div className={`diff-stat ${aUnique > 0 || bUnique > 0 ? 'diff-stat-divergent' : 'diff-stat-identical'}`}>
+             <span className="diff-label">Topology</span>
+             <span className="diff-value">
+               {aUnique > 0 || bUnique > 0 
+                 ? `${aUnique} unique A spans, ${bUnique} unique B spans`
+                 : `Identical Execution Paths`}
+             </span>
+          </div>
+          <div className="diff-stat">
+             <span className="diff-label">Span count</span>
+             <span className="diff-value">{spansA.length} vs {spansB.length} spans</span>
+          </div>
+        </div>
+      );
     }
 
     return {
@@ -159,7 +182,7 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
       edgesA: gA.edges,
       nodesB: enhancedB,
       edgesB: gB.edges,
-      diffSummary: summaryText
+      diffSummary: diffSummaryNode
     };
   }, [spansA, spansB, summaryA, summaryB]);
 
@@ -178,7 +201,7 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
             </button>
           </div>
         </div>
-        <p className="compare-subtitle">{summaryA && summaryB ? diffSummary : 'Select two traces from the dropdowns below or the sidebar to begin topological comparison.'}</p>
+        {diffSummary}
       </div>
       <div className="compare-split-view">
         <div className="compare-graph-container">

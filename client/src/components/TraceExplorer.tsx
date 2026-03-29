@@ -96,14 +96,16 @@ export function TraceExplorer({
                   <div className="compare-actions">
                     <button 
                       type="button" 
-                      className={`compare-btn ${isCompareA ? 'active' : ''}`} 
+                      className={`compare-btn compare-btn-a ${isCompareA ? 'active' : ''}`} 
+                      title="Set as Trace A"
                       onClick={(e) => { e.stopPropagation(); onSetCompareA?.(trace.traceId); }}
-                    >A</button>
+                    >{isCompareA ? 'Selected A' : 'Set A'}</button>
                     <button 
                       type="button" 
-                      className={`compare-btn ${isCompareB ? 'active' : ''}`} 
+                      className={`compare-btn compare-btn-b ${isCompareB ? 'active' : ''}`} 
+                      title="Set as Trace B"
                       onClick={(e) => { e.stopPropagation(); onSetCompareB?.(trace.traceId); }}
-                    >B</button>
+                    >{isCompareB ? 'Selected B' : 'Set B'}</button>
                   </div>
                 ) : (
                   <div className={`status-indicator indicator-${trace.health}`} />

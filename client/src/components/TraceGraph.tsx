@@ -56,7 +56,15 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
   );
 }
 
-const nodeTypes = { traceNode: TraceNode };
+function LayerLabelNode({ data }: { data: { label: string } }) {
+  return (
+    <div className="layer-label-node">
+      {data.label}
+    </div>
+  );
+}
+
+const nodeTypes = { traceNode: TraceNode, layerLabel: LayerLabelNode };
 
 export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave }: TraceGraphProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | undefined>();
@@ -155,7 +163,7 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
         {summary ? (
           <div className="graph-caption">
             <span className={`view-mode-badge ${viewMode === 'business' ? 'view-mode-business' : 'view-mode-infra'}`}>
-              {viewMode === 'business' ? 'Business Mode' : 'Infra Mode'}
+              {viewMode === 'business' ? 'Logical Flow' : 'Raw Spans'}
             </span>
             <span className="caption-method">{summary.method} {summary.route}</span>
             <span className="caption-duration">{formatDuration(summary.durationMs)}</span>
@@ -182,18 +190,15 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
 
       <div className="graph-canvas">
         {mostlyInfraTrace ? <div className="mode-empty-hint">This trace contains mostly infrastructure spans.</div> : null}
-        <div className="layer-rails" aria-hidden>
-          <span>Controller</span>
-          <span>Service</span>
-          <span>Repository</span>
-          <span>Database</span>
-        </div>
         <ReactFlow
           nodes={displayNodes}
           edges={selectedEdges}
           nodeTypes={nodeTypes}
           fitView
-          onNodeClick={(_, node) => onSelectNode(node.id)}
+          onNodeClick={(_, node) => {
+             if (node.type === 'layerLabel') return;
+             onSelectNode(node.id);
+          }}
           onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
           onNodeMouseLeave={() => setHoveredNodeId(undefined)}
           onPaneClick={() => onSelectNode(undefined)}
