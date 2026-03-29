@@ -16,8 +16,11 @@ export async function startTelemetry() {
     diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
   }
 
-  const otlpBase = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318').replace(/\/$/, '');
-  const traceExporter = new OTLPTraceExporter({ url: `${otlpBase}/v1/traces` });
+  const otlpBase = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://127.0.0.1:4318').replace(/\/$/, '');
+  const traceExporter = new OTLPTraceExporter({ 
+    url: `${otlpBase}/v1/traces`,
+    timeoutMillis: 30000
+  });
 
   sdk = new NodeSDK({
     traceExporter,
