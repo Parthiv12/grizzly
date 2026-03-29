@@ -8,6 +8,7 @@ interface TraceExplorerProps {
   statusFilter: 'all' | TraceHealth;
   onStatusFilterChange: (value: 'all' | TraceHealth) => void;
   shortcutsHint?: string;
+  newTraceIds?: Set<string>;
 }
 
 export function TraceExplorer({
@@ -16,7 +17,8 @@ export function TraceExplorer({
   onSelectTrace,
   statusFilter,
   onStatusFilterChange,
-  shortcutsHint
+  shortcutsHint,
+  newTraceIds = new Set()
 }: TraceExplorerProps) {
   return (
     <aside className="panel explorer-panel">
@@ -50,12 +52,13 @@ export function TraceExplorer({
       <div className="trace-list" role="listbox" aria-label="Trace list">
         {traces.map((trace) => {
           const active = activeTraceId === trace.traceId;
+          const isNew = newTraceIds.has(trace.traceId);
           const statusClass = `status-${trace.health}`;
           return (
             <button
               type="button"
               key={trace.traceId}
-              className={`trace-row ${active ? 'trace-row-active' : ''} trace-row-${trace.health}`}
+              className={`trace-row ${active ? 'trace-row-active' : ''} trace-row-${trace.health} ${isNew ? 'trace-row-new' : ''}`}
               onClick={() => onSelectTrace(trace.traceId)}
               aria-pressed={active}
               role="option"
@@ -63,7 +66,10 @@ export function TraceExplorer({
             >
               <div className="trace-row-main">
                 <span className="method">{trace.method}</span>
-                <span className="route">{trace.route}</span>
+                <span className="route">
+                  {trace.route}
+                  {isNew && <span className="new-badge">NEW</span>}
+                </span>
                 <div className={`status-indicator indicator-${trace.health}`} />
               </div>
               <div className="trace-row-sub">

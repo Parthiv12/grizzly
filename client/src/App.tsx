@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import type { Edge, Node } from 'reactflow';
 import { fetchTraceEventsByServiceScoped, fetchTraceServices } from './api/traces';
 import { SpanInspector } from './components/SpanInspector';
@@ -24,6 +24,10 @@ export function App() {
   const [activeTraceId, setActiveTraceId] = useState<string | undefined>(undefined);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [autoSelectNew, setAutoSelectNew] = useState(false);
+  const [isGraphHovered, setIsGraphHovered] = useState(false);
+  const [newTraceIds, setNewTraceIds] = useState<Set<string>>(new Set());
+  const seenTraceIds = useRef<Set<string>>(new Set());
 
   const loadServices = useCallback(async () => {
     try {
@@ -88,16 +92,50 @@ export function App() {
   }, [viewMode]);
 
   useEffect(() => {
-    if (!live) {
+    if (!live || isGraphHovered) {
       return;
     }
     const intervalId = window.setInterval(() => {
       void loadEvents();
-    }, 2500);
+    }, 2000);
     return () => window.clearInterval(intervalId);
-  }, [live, loadEvents]);
+  }, [live, isGraphHovered, loadEvents]);
 
   const traceSummaries = useMemo(() => createTraceSummaries(events, viewMode), [events, viewMode]);
+
+  useEffect(() => {
+    if (traceSummaries.length === 0) return;
+    
+    let isInitialLoad = seenTraceIds.current.size === 0;
+    const newlyAdded: string[] = [];
+    
+    for (const t of traceSummaries) {
+      if (!seenTraceIds.current.has(t.traceId)) {
+        newlyAdded.push(t.traceId);
+        seenTraceIds.current.add(t.traceId);
+      }
+    }
+
+    if (newlyAdded.length > 0 && !isInitialLoad) {
+      setNewTraceIds(prev => new Set([...prev, ...newlyAdded]));
+      
+      if (autoSelectNew) {
+        const newest = traceSummaries.filter(t => newlyAdded.includes(t.traceId)).sort((a,b) => b.startedAt - a.startedAt)[0];
+        if (newest) {
+          setActiveTraceId(newest.traceId);
+          setSelectedNodeId(undefined);
+        }
+      }
+
+      setTimeout(() => {
+        setNewTraceIds(prev => {
+          const next = new Set(prev);
+          newlyAdded.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 4000);
+    }
+  }, [traceSummaries, autoSelectNew]);
   const groupedTraceEvents = useMemo(() => groupEventsByTraceId(events), [events]);
 
   const summaryByTraceId = useMemo(() => {
@@ -213,6 +251,8 @@ export function App() {
         total={traceSummaries.length}
         errors={errorCount}
         slow={slowCount}
+        autoSelectNew={autoSelectNew}
+        onToggleAutoSelect={() => setAutoSelectNew(!autoSelectNew)}
       />
 
       <main className="layout-grid">
@@ -226,6 +266,7 @@ export function App() {
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           shortcutsHint="J/K or Arrow keys"
+          newTraceIds={newTraceIds}
         />
 
         {loading ? (
@@ -241,6 +282,8 @@ export function App() {
             summary={activeSummary}
             viewMode={viewMode}
             mostlyInfraTrace={mostlyInfraTrace}
+            onMouseEnter={() => setIsGraphHovered(true)}
+            onMouseLeave={() => setIsGraphHovered(false)}
           />
         )}
 

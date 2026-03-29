@@ -11,6 +11,8 @@ interface TraceGraphProps {
   summary?: TraceSummary;
   viewMode: TraceViewMode;
   mostlyInfraTrace: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 interface TraceNodeData {
@@ -53,7 +55,7 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
 
 const nodeTypes = { traceNode: TraceNode };
 
-export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace }: TraceGraphProps) {
+export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave }: TraceGraphProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | undefined>();
 
   const { ancestorIds, descendantIds } = useMemo(() => {
@@ -136,7 +138,7 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
   }, [edges, focusActive, ancestorIds, descendantIds]);
 
   return (
-    <section className="panel graph-panel">
+    <section className="panel graph-panel" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="panel-header">
         <h2>Trace Graph</h2>
         {summary ? (

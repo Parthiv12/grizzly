@@ -13,6 +13,8 @@ interface TopBarProps {
   total: number;
   errors: number;
   slow: number;
+  autoSelectNew: boolean;
+  onToggleAutoSelect: () => void;
 }
 
 export function TopBar({
@@ -29,7 +31,9 @@ export function TopBar({
   onOpenQuickJump,
   total,
   errors,
-  slow
+  slow,
+  autoSelectNew,
+  onToggleAutoSelect
 }: TopBarProps) {
   return (
     <header className="topbar">
@@ -77,11 +81,18 @@ export function TopBar({
           onChange={(event) => onQueryChange(event.target.value)}
         />
 
+        {live && (
+          <label className="auto-select-toggle" title="Auto-select newest trace">
+            <input type="checkbox" checked={autoSelectNew} onChange={onToggleAutoSelect} />
+            <span className="toggle-label">Auto-focus</span>
+          </label>
+        )}
+
         <button type="button" className={`button ${live ? 'button-live' : ''}`} onClick={onToggleLive}>
           {live ? 'Live On' : 'Live Off'}
         </button>
 
-        <button type="button" className="button" onClick={onRefresh}>
+        <button type="button" className="button" onClick={onRefresh} disabled={live}>
           Refresh
         </button>
 
