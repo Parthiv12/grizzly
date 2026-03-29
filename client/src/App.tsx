@@ -6,6 +6,7 @@ import { TopBar } from './components/TopBar';
 import { TraceExplorer } from './components/TraceExplorer';
 import { TraceGraph } from './components/TraceGraph';
 import { TraceQuickJump } from './components/TraceQuickJump';
+import { CompareView } from './components/CompareView';
 import type { RawTraceEvent, SpanViewModel, TraceHealth, TraceViewMode } from './types/trace';
 import { classifySpan, createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
 
@@ -28,6 +29,11 @@ export function App() {
   const [isGraphHovered, setIsGraphHovered] = useState(false);
   const [newTraceIds, setNewTraceIds] = useState<Set<string>>(new Set());
   const seenTraceIds = useRef<Set<string>>(new Set());
+
+  // Compare mode states
+  const [appMode, setAppMode] = useState<'explorer' | 'compare'>('explorer');
+  const [compareTraceAId, setCompareTraceAId] = useState<string | undefined>(undefined);
+  const [compareTraceBId, setCompareTraceBId] = useState<string | undefined>(undefined);
 
   const loadServices = useCallback(async () => {
     try {
@@ -253,9 +259,11 @@ export function App() {
         slow={slowCount}
         autoSelectNew={autoSelectNew}
         onToggleAutoSelect={() => setAutoSelectNew(!autoSelectNew)}
+        appMode={appMode}
+        onAppModeChange={setAppMode}
       />
 
-      <main className="layout-grid">
+      <main className={`layout-grid ${appMode === 'compare' ? 'layout-grid-compare' : ''}`}>
         <TraceExplorer
           traces={filteredTraces}
           activeTraceId={activeTraceId}
@@ -267,27 +275,43 @@ export function App() {
           onStatusFilterChange={setStatusFilter}
           shortcutsHint="J/K or Arrow keys"
           newTraceIds={newTraceIds}
+          appMode={appMode}
+          compareTraceAId={compareTraceAId}
+          compareTraceBId={compareTraceBId}
+          onSetCompareA={setCompareTraceAId}
+          onSetCompareB={setCompareTraceBId}
         />
 
-        {loading ? (
-          <section className="panel graph-panel panel-message">Loading traces...</section>
-        ) : error ? (
-          <section className="panel graph-panel panel-message panel-error">{error}</section>
+        {appMode === 'explorer' ? (
+          <>
+            {loading ? (
+              <section className="panel graph-panel panel-message">Loading traces...</section>
+            ) : error ? (
+              <section className="panel graph-panel panel-message panel-error">{error}</section>
+            ) : (
+              <TraceGraph
+                nodes={graph.nodes}
+                edges={graph.edges}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                summary={activeSummary}
+                viewMode={viewMode}
+                mostlyInfraTrace={mostlyInfraTrace}
+                onMouseEnter={() => setIsGraphHovered(true)}
+                onMouseLeave={() => setIsGraphHovered(false)}
+              />
+            )}
+            <SpanInspector span={selectedSpan} />
+          </>
         ) : (
-          <TraceGraph
-            nodes={graph.nodes}
-            edges={graph.edges}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-            summary={activeSummary}
+          <CompareView
+            eventsA={compareTraceAId ? (groupedTraceEvents.get(compareTraceAId) ?? []) : []}
+            eventsB={compareTraceBId ? (groupedTraceEvents.get(compareTraceBId) ?? []) : []}
+            summaryA={compareTraceAId ? summaryByTraceId.get(compareTraceAId) : undefined}
+            summaryB={compareTraceBId ? summaryByTraceId.get(compareTraceBId) : undefined}
             viewMode={viewMode}
-            mostlyInfraTrace={mostlyInfraTrace}
-            onMouseEnter={() => setIsGraphHovered(true)}
-            onMouseLeave={() => setIsGraphHovered(false)}
           />
         )}
-
-        <SpanInspector span={selectedSpan} />
       </main>
 
       <TraceQuickJump

@@ -9,6 +9,11 @@ interface TraceExplorerProps {
   onStatusFilterChange: (value: 'all' | TraceHealth) => void;
   shortcutsHint?: string;
   newTraceIds?: Set<string>;
+  appMode?: 'explorer' | 'compare';
+  compareTraceAId?: string;
+  compareTraceBId?: string;
+  onSetCompareA?: (traceId: string) => void;
+  onSetCompareB?: (traceId: string) => void;
 }
 
 export function TraceExplorer({
@@ -18,7 +23,12 @@ export function TraceExplorer({
   statusFilter,
   onStatusFilterChange,
   shortcutsHint,
-  newTraceIds = new Set()
+  newTraceIds = new Set(),
+  appMode = 'explorer',
+  compareTraceAId,
+  compareTraceBId,
+  onSetCompareA,
+  onSetCompareB
 }: TraceExplorerProps) {
   return (
     <aside className="panel explorer-panel">
@@ -51,26 +61,53 @@ export function TraceExplorer({
 
       <div className="trace-list" role="listbox" aria-label="Trace list">
         {traces.map((trace) => {
-          const active = activeTraceId === trace.traceId;
+          const active = appMode === 'explorer' && activeTraceId === trace.traceId;
+          const isCompareA = appMode === 'compare' && compareTraceAId === trace.traceId;
+          const isCompareB = appMode === 'compare' && compareTraceBId === trace.traceId;
           const isNew = newTraceIds.has(trace.traceId);
           const statusClass = `status-${trace.health}`;
+          
+          let compareClass = '';
+          if (isCompareA) compareClass = 'trace-row-compare-a';
+          else if (isCompareB) compareClass = 'trace-row-compare-b';
+
           return (
-            <button
-              type="button"
+            <div
               key={trace.traceId}
-              className={`trace-row ${active ? 'trace-row-active' : ''} trace-row-${trace.health} ${isNew ? 'trace-row-new' : ''}`}
-              onClick={() => onSelectTrace(trace.traceId)}
-              aria-pressed={active}
+              className={`trace-row ${active ? 'trace-row-active' : ''} trace-row-${trace.health} ${isNew ? 'trace-row-new' : ''} ${compareClass}`}
+              onClick={(e) => {
+                // Ignore general click if in compare mode and they are trying to click the buttons.
+                // But honestly, we can just let row clicks set activeTraceId if they want in explorer
+                if (appMode === 'explorer') {
+                  onSelectTrace(trace.traceId);
+                }
+              }}
               role="option"
               aria-selected={active}
             >
-              <div className="trace-row-main">
+              <div className="trace-row-main" style={{ display: 'flex', alignItems: 'center' }}>
                 <span className="method">{trace.method}</span>
-                <span className="route">
+                <span className="route" style={{ flex: 1 }}>
                   {trace.route}
                   {isNew && <span className="new-badge">NEW</span>}
                 </span>
-                <div className={`status-indicator indicator-${trace.health}`} />
+
+                {appMode === 'compare' ? (
+                  <div className="compare-actions">
+                    <button 
+                      type="button" 
+                      className={`compare-btn ${isCompareA ? 'active' : ''}`} 
+                      onClick={(e) => { e.stopPropagation(); onSetCompareA?.(trace.traceId); }}
+                    >A</button>
+                    <button 
+                      type="button" 
+                      className={`compare-btn ${isCompareB ? 'active' : ''}`} 
+                      onClick={(e) => { e.stopPropagation(); onSetCompareB?.(trace.traceId); }}
+                    >B</button>
+                  </div>
+                ) : (
+                  <div className={`status-indicator indicator-${trace.health}`} />
+                )}
               </div>
               <div className="trace-row-sub">
                 <span className="trace-id" title={trace.traceId}>{shortTraceId(trace.traceId)}</span>
@@ -82,7 +119,7 @@ export function TraceExplorer({
                 <span className="trace-signal trace-signal-infra">I {trace.infraSpanCount}</span>
                 {trace.hasDatabaseInteraction ? <span className="trace-signal trace-signal-db">DB</span> : null}
               </div>
-            </button>
+            </div>
           );
         })}
 

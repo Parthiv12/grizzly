@@ -21,6 +21,7 @@ interface TraceNodeData {
   isInfra?: boolean;
   faded?: boolean;
   highlighted?: boolean;
+  comparisonState?: 'shared' | 'unique' | 'none';
 }
 
 function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
@@ -34,7 +35,9 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
     slow ? 'trace-node-slow' : '',
     data.isMainPath ? 'trace-node-main' : '',
     data.isInfra ? 'trace-node-infra' : '',
-    data.faded ? 'trace-node-faded' : ''
+    data.faded ? 'trace-node-faded' : '',
+    data.comparisonState === 'shared' ? 'trace-node-shared' : '',
+    data.comparisonState === 'unique' ? 'trace-node-unique' : ''
   ].filter(Boolean).join(' ');
 
   return (

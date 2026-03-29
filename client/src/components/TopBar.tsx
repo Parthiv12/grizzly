@@ -15,6 +15,8 @@ interface TopBarProps {
   slow: number;
   autoSelectNew: boolean;
   onToggleAutoSelect: () => void;
+  appMode: 'explorer' | 'compare';
+  onAppModeChange: (mode: 'explorer' | 'compare') => void;
 }
 
 export function TopBar({
@@ -33,15 +35,32 @@ export function TopBar({
   errors,
   slow,
   autoSelectNew,
-  onToggleAutoSelect
+  onToggleAutoSelect,
+  appMode,
+  onAppModeChange
 }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="brand-block">
         <div className="brand-dot" />
-        <div>
-          <p className="brand-name">Debug Flow Visualizer</p>
-          <p className="brand-subtitle">Trace Explorer</p>
+        <div className="brand-text">
+          <p className="brand-name">TraceLens</p>
+          <div className="app-mode-tabs" role="tablist">
+            <button
+              type="button"
+              className={`app-tab ${appMode === 'explorer' ? 'active' : ''}`}
+              onClick={() => onAppModeChange('explorer')}
+            >
+              Explorer
+            </button>
+            <button
+              type="button"
+              className={`app-tab ${appMode === 'compare' ? 'active' : ''}`}
+              onClick={() => onAppModeChange('compare')}
+            >
+              Compare
+            </button>
+          </div>
         </div>
       </div>
 
@@ -56,7 +75,7 @@ export function TopBar({
             ))}
           </select>
 
-          <div className="mode-toggle" role="tablist" aria-label="Trace view mode">
+          <div className="mode-toggle" role="tablist" aria-label="Backend layer view mode">
             <button
               type="button"
               className={`mode-chip ${viewMode === 'business' ? 'mode-chip-active' : ''}`}
