@@ -1,3 +1,5 @@
+import { BrandLogo } from './BrandLogo';
+
 interface TopBarProps {
   services: string[];
   selectedService?: string;
@@ -42,7 +44,7 @@ export function TopBar({
   return (
     <header className="topbar">
       <div className="brand-block">
-        <div className="brand-dot" />
+        <BrandLogo size={22} className="brand-logo" />
         <div className="brand-text">
           <p className="brand-name">TraceLens</p>
           <div className="app-mode-tabs" role="tablist">
