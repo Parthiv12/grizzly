@@ -24,6 +24,7 @@ interface TraceNodeData {
   highlighted?: boolean;
   comparisonState?: 'identical' | 'changed' | 'unique' | 'none';
   diffInfo?: any;
+  isTraceA?: boolean;
 }
 
 function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
@@ -44,9 +45,22 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
   ].filter(Boolean).join(' ');
 
   const d = data.diffInfo;
+  
+  let tooltip = span.step;
+  if (data.comparisonState === 'changed' && d?.durationDiffMs !== undefined) {
+     const otherDurationMs = span.durationMs - d.durationDiffMs;
+     const otherStatus = d.statusChanged ? (span.status === 'error' ? 'success' : 'error') : span.status;
+     
+     const durA = data.isTraceA ? span.durationMs : otherDurationMs;
+     const durB = data.isTraceA ? otherDurationMs : span.durationMs;
+     const statA = data.isTraceA ? span.status : otherStatus;
+     const statB = data.isTraceA ? otherStatus : span.status;
+     
+     tooltip = `${span.step}\nA: ${Math.round(durA)}ms, ${statA}\nB: ${Math.round(durB)}ms, ${statB}\n${d.durationDiffMs > 0 ? '+' : ''}${Math.round(d.durationDiffMs)}ms`;
+  }
 
   return (
-    <div className={classNames}>
+    <div className={classNames} title={tooltip}>
       <Handle type="target" position={Position.Left} className="trace-handle" />
       <div className="trace-node-header">
         <span className="trace-node-layer">{span.layer}</span>
@@ -81,7 +95,7 @@ function LayerLabelNode({ data }: { data: { label: string } }) {
 
 const nodeTypes = { traceNode: TraceNode, layerLabel: LayerLabelNode };
 
-export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave }: TraceGraphProps) {
+export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave, onNodeHover }: TraceGraphProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
 
