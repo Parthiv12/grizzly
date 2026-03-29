@@ -70,6 +70,12 @@ function buildTraceMeta(req: Request, route: string): RequestTraceMeta {
     httpMethod: req.method,
     httpRoute: route,
     forceSlow: req.query.slow === '1',
-    forceDbError: req.query.forceDbError === '1'
+    forceDbError: req.query.forceDbError === '1',
+    httpUrl: req.originalUrl || req.url,
+    httpBody: Object.keys(req.body || {}).length > 0 ? JSON.stringify(req.body) : undefined,
+    httpHeaders: JSON.stringify({
+      'content-type': req.headers['content-type'],
+      'accept': req.headers['accept']
+    })
   };
 }

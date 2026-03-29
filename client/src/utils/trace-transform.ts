@@ -123,6 +123,11 @@ export function createTraceSummaries(events: RawTraceEvent[], viewMode: TraceVie
       health = 'slow';
     }
 
+    const controllerSpan = traceEvents.find((e) => e.layer === 'controller') ?? allTraceEvents.find((e) => e.layer === 'controller');
+    const httpUrl = stringFromMetadata(controllerSpan?.metadata, 'http.url');
+    const httpBody = stringFromMetadata(controllerSpan?.metadata, 'http.request.body');
+    const httpHeaders = stringFromMetadata(controllerSpan?.metadata, 'http.request.headers');
+
     summaries.push({
       traceId,
       method,
@@ -135,7 +140,12 @@ export function createTraceSummaries(events: RawTraceEvent[], viewMode: TraceVie
       businessSpanCount: businessEvents.length,
       infraSpanCount: infraEvents.length,
       hasDatabaseInteraction,
-      priorityScore
+      priorityScore,
+      requestMetadata: {
+        url: httpUrl,
+        body: httpBody,
+        headers: httpHeaders
+      }
     });
   }
 

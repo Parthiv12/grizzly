@@ -102,9 +102,10 @@ interface CompareViewProps {
   onSetCompareB: (id?: string) => void;
   onSwap: () => void;
   onReset: () => void;
+  onClose: () => void;
 }
 
-export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summaryA, summaryB, viewMode, onSetCompareA, onSetCompareB, onSwap, onReset }: CompareViewProps) {
+export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summaryA, summaryB, viewMode, onSetCompareA, onSetCompareB, onSwap, onReset, onClose }: CompareViewProps) {
   const spansA = useMemo(() => createSpanView(eventsA, viewMode), [eventsA, viewMode]);
   const spansB = useMemo(() => createSpanView(eventsB, viewMode), [eventsB, viewMode]);
 
@@ -228,12 +229,11 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
         <div className="compare-hero-header">
           <h2 className="compare-title">Compare Executions</h2>
           <div className="compare-hero-actions">
-            <button className="button button-secondary" onClick={onSwap} disabled={!traceAId || !traceBId}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-              Swap A/B
-            </button>
             <button className="button button-danger" onClick={onReset} disabled={!traceAId && !traceBId}>
               Reset
+            </button>
+            <button className="button" style={{ padding: '0 10px', marginLeft: '12px' }} onClick={onClose} aria-label="Close Compare Mode" title="Exit Compare Mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>
         </div>

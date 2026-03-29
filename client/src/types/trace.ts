@@ -30,6 +30,11 @@ export interface TraceSummary {
   infraSpanCount: number;
   hasDatabaseInteraction: boolean;
   priorityScore: number;
+  requestMetadata?: {
+    url?: string;
+    body?: string;
+    headers?: string;
+  };
 }
 
 export interface SpanViewModel {

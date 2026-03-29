@@ -22,4 +22,7 @@ export interface RequestTraceMeta {
   httpRoute: string;
   forceSlow?: boolean;
   forceDbError?: boolean;
+  httpUrl?: string;
+  httpBody?: string;
+  httpHeaders?: string;
 }

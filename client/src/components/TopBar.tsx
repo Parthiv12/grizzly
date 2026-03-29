@@ -103,7 +103,7 @@ export function TopBar({
         />
 
         {live && (
-          <label className="auto-select-toggle" title="Auto-select newest trace">
+          <label className="auto-select-toggle" title="Automatically centers important nodes">
             <input type="checkbox" checked={autoSelectNew} onChange={onToggleAutoSelect} />
             <span className="toggle-label">Auto-focus</span>
           </label>
@@ -114,7 +114,7 @@ export function TopBar({
         </button>
 
         <button type="button" className="button" onClick={onRefresh} disabled={live}>
-          Refresh
+          Refresh Data
         </button>
 
         <button type="button" className="button" onClick={onOpenQuickJump}>
@@ -122,9 +122,12 @@ export function TopBar({
         </button>
 
         <div className="stats-row" aria-label="Trace stats">
-          <span className="top-stat">{total} traces</span>
-          <span className="top-stat top-stat-error">{errors} errors</span>
-          <span className="top-stat top-stat-slow">{slow} slow</span>
+          <div className="stats-snapshot-label">Live System Snapshot</div>
+          <div className="stats-pills">
+            <span className="top-stat">{total} Traces</span>
+            <span className="top-stat top-stat-error">{errors} Errors</span>
+            <span className="top-stat top-stat-slow">{slow} Slow</span>
+          </div>
         </div>
       </div>
     </header>

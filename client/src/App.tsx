@@ -9,6 +9,7 @@ import { TraceQuickJump } from './components/TraceQuickJump';
 import { CompareView } from './components/CompareView';
 import type { RawTraceEvent, SpanViewModel, TraceHealth, TraceViewMode } from './types/trace';
 import { classifySpan, createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
+import { executeReplayRequest, isReplaySafe } from './features/compare/replay/replayLogic';
 
 const INTERNAL_SERVICE_NAMES = new Set(['debug-flow-visualizer-backend', 'jaeger-all-in-one']);
 
@@ -27,6 +28,7 @@ export function App() {
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [autoSelectNew, setAutoSelectNew] = useState(false);
   const [isGraphHovered, setIsGraphHovered] = useState(false);
+  const [replaying, setReplaying] = useState(false);
   const [newTraceIds, setNewTraceIds] = useState<Set<string>>(new Set());
   const seenTraceIds = useRef<Set<string>>(new Set());
 
@@ -208,6 +210,11 @@ export function App() {
         return;
       }
 
+      if (event.key === 'Escape') {
+         setSelectedNodeId(undefined);
+         return;
+      }
+
       if (filteredTraces.length === 0) {
         return;
       }
@@ -239,6 +246,70 @@ export function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [activeTraceId, filteredTraces]);
+
+  const handleReplay = async () => {
+    if (!activeSummary) return;
+
+    if (!isReplaySafe(activeSummary)) {
+      if (!window.confirm("This request uses an unsafe method (POST/PATCH) and may modify data. Do you want to proceed with replay?")) {
+        return;
+      }
+    }
+
+    setReplaying(true);
+    const originalTraceId = activeSummary.traceId;
+    const startTime = Date.now();
+
+    try {
+      console.log(`[Replay] Executing request for trace ${originalTraceId} on ${activeSummary.route}`);
+      await executeReplayRequest(activeSummary);
+      
+      // Wait for the new trace to appear in the backend
+      let retries = 20;
+      let newTraceId: string | undefined;
+
+      while (retries > 0) {
+        console.log(`[Replay] Polling for new trace... (Retries left: ${retries})`);
+        await new Promise(r => setTimeout(r, 1000));
+        
+        const data = await fetchTraceEventsByServiceScoped(selectedService!, true);
+        const newSummaries = createTraceSummaries(data, viewMode);
+        
+        // Find the newest trace that matches the route/method and started around or after we clicked replay
+        // Broadening the window further to 10s to account for potential server/client clock drift
+        const candidates = newSummaries.filter(s => 
+          s.route === activeSummary.route && 
+          s.method === activeSummary.method &&
+          s.startedAt >= (startTime - 10000) &&
+          s.traceId !== originalTraceId
+        );
+
+        // Pick the one that started closest to our startTime
+        if (candidates.length > 0) {
+          candidates.sort((a, b) => Math.abs(a.startedAt - startTime) - Math.abs(b.startedAt - startTime));
+          newTraceId = candidates[0].traceId;
+          console.log(`[Replay] Found new trace: ${newTraceId}`);
+          setEvents(data);
+          break;
+        }
+        retries--;
+      }
+
+      if (newTraceId) {
+        setCompareTraceAId(originalTraceId);
+        setCompareTraceBId(newTraceId);
+        setAppMode('compare');
+      } else {
+        console.warn(`[Replay] No new trace found after 20 retries for ${activeSummary.route}`);
+        alert("Replay request sent, but couldn't find the new trace in Jaeger yet. This can happen due to collection delays. Please try clicking 'Refresh Data' in a few seconds.");
+        void loadEvents();
+      }
+    } catch (err: any) {
+      alert(`Replay failed: ${err.message}`);
+    } finally {
+      setReplaying(false);
+    }
+  };
 
   return (
     <div className={`app-shell view-${viewMode}`}>
@@ -299,9 +370,11 @@ export function App() {
                 mostlyInfraTrace={mostlyInfraTrace}
                 onMouseEnter={() => setIsGraphHovered(true)}
                 onMouseLeave={() => setIsGraphHovered(false)}
+                onReplay={handleReplay}
+                replaying={replaying}
               />
             )}
-            <SpanInspector span={selectedSpan} />
+            <SpanInspector span={selectedSpan} onClose={() => setSelectedNodeId(undefined)} />
           </>
         ) : (
           <CompareView
@@ -324,6 +397,7 @@ export function App() {
               setCompareTraceAId(undefined);
               setCompareTraceBId(undefined);
             }}
+            onClose={() => setAppMode('explorer')}
           />
         )}
       </main>

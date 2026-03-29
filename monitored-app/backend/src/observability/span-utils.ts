@@ -50,6 +50,15 @@ function buildAttributes(meta: SpanMeta): Attributes {
   if (meta.dbSystem) {
     attributes['db.system'] = meta.dbSystem;
   }
+  if (meta.httpUrl) {
+    attributes['http.url'] = meta.httpUrl;
+  }
+  if (meta.httpBody) {
+    attributes['http.request.body'] = meta.httpBody;
+  }
+  if (meta.httpHeaders) {
+    attributes['http.request.headers'] = meta.httpHeaders;
+  }
 
   return attributes;
 }

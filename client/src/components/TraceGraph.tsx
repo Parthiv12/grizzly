@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, type NodeProps, Position, Handle, type Edge, type Node, MarkerType } from 'reactflow';
+import { useMemo, useState, useEffect } from 'react';
+import ReactFlow, { Background, Controls, MiniMap, type NodeProps, Position, Handle, type Edge, type Node, MarkerType, useReactFlow } from 'reactflow';
 import type { SpanViewModel, TraceSummary, TraceViewMode } from '../types/trace';
 import { formatDuration, formatTime, shortTraceId } from '../utils/format';
 
@@ -14,6 +14,9 @@ interface TraceGraphProps {
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   onNodeHover?: (nodeId?: string) => void;
+  onReplay?: () => void;
+  replaying?: boolean;
+  autoFocus?: boolean;
 }
 
 interface TraceNodeData {
@@ -95,7 +98,88 @@ function LayerLabelNode({ data }: { data: { label: string } }) {
 
 const nodeTypes = { traceNode: TraceNode, layerLabel: LayerLabelNode };
 
-export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace, onMouseEnter, onMouseLeave, onNodeHover }: TraceGraphProps) {
+function ViewFitter({ traceId, autoFocus, selectedNodeId, nodes }: { traceId?: string; autoFocus?: boolean; selectedNodeId?: string; nodes: Node[] }) {
+  const { fitView, setCenter, getZoom } = useReactFlow();
+  
+  useEffect(() => {
+    if (!autoFocus) return;
+
+    window.requestAnimationFrame(() => {
+      // If a node is explicitly selected, center on it
+      if (selectedNodeId) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node && node.position) {
+          setCenter(node.position.x + (node.width ?? 200)/2, node.position.y + (node.height ?? 80)/2, { zoom: getZoom(), duration: 600 });
+          return;
+        }
+      }
+
+      // In compare mode, try to focus on divergence point or a changed node!
+      const divergenceNode = nodes.find(n => n.data?.diffInfo?.isDivergencePoint);
+      if (divergenceNode && divergenceNode.position) {
+        setCenter(divergenceNode.position.x + 100, divergenceNode.position.y + 40, { zoom: Math.max(0.8, getZoom()), duration: 600 });
+        return;
+      }
+      const topChangedNode = nodes.find(n => n.data?.comparisonState === 'changed' || n.data?.comparisonState === 'unique');
+      if (topChangedNode && topChangedNode.position) {
+        setCenter(topChangedNode.position.x + 100, topChangedNode.position.y + 40, { zoom: Math.max(0.8, getZoom()), duration: 600 });
+        return;
+      }
+
+      // Otherwise fit the whole graph for a new trace
+      fitView({ duration: 600, padding: 0.1 });
+    });
+  }, [traceId, selectedNodeId, autoFocus, fitView, setCenter, getZoom, nodes]);
+  
+  return null;
+}
+
+function GraphNavigation({ selectedNodeId, nodes }: { selectedNodeId?: string; nodes: Node[] }) {
+  const { fitView, zoomIn, zoomOut, setCenter, getZoom } = useReactFlow();
+  
+  const handleCenterSelected = () => {
+    if (selectedNodeId) {
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (node && node.position) {
+        setCenter(node.position.x + (node.width ?? 200)/2, node.position.y + (node.height ?? 80)/2, { zoom: getZoom(), duration: 500 });
+      }
+    }
+  };
+
+  return (
+    <div className="custom-graph-controls" style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 5, display: 'flex', gap: '8px', background: 'rgba(15,23,42,0.85)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(63,80,110,0.4)', backdropFilter: 'blur(4px)' }}>
+      <button className="graph-control-btn" title="Zoom In" onClick={() => zoomIn({ duration: 300 })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <button className="graph-control-btn" title="Zoom Out" onClick={() => zoomOut({ duration: 300 })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }}></div>
+      <button className="graph-control-btn" title="Fit to View" onClick={() => fitView({ duration: 500, padding: 0.1 })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+      </button>
+      <button className="graph-control-btn" title="Focus Selected Node" onClick={handleCenterSelected} disabled={!selectedNodeId}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
+  );
+}
+
+export function TraceGraph({ 
+  nodes, 
+  edges, 
+  selectedNodeId, 
+  onSelectNode, 
+  summary, 
+  viewMode, 
+  mostlyInfraTrace, 
+  onMouseEnter, 
+  onMouseLeave, 
+  onNodeHover,
+  onReplay,
+  replaying,
+  autoFocus
+}: TraceGraphProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | undefined>();
   const [copied, setCopied] = useState(false);
 
@@ -213,6 +297,18 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               )}
             </button>
+
+            {onReplay && (
+              <button
+                type="button"
+                className={`button button-replay ${replaying ? 'button-loading' : ''}`}
+                onClick={onReplay}
+                disabled={replaying}
+                title="Re-run the original request and compare"
+              >
+                {replaying ? 'Replaying...' : 'Replay Request'}
+              </button>
+            )}
           </div>
         ) : null}
       </div>
@@ -223,7 +319,6 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
           nodes={displayNodes}
           edges={selectedEdges}
           nodeTypes={nodeTypes}
-          fitView
           onNodeClick={(_, node) => {
              if (node.type === 'layerLabel') return;
              onSelectNode(node.id);
@@ -247,8 +342,9 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
               return '#374151';
             }} 
           />
-          <Controls showInteractive={false} />
           <Background gap={18} size={1} color="#1f2734" />
+          <ViewFitter traceId={summary?.traceId} autoFocus={autoFocus} selectedNodeId={selectedNodeId} nodes={nodes} />
+          <GraphNavigation selectedNodeId={selectedNodeId} nodes={nodes} />
         </ReactFlow>
       </div>
     </section>
