@@ -20,7 +20,21 @@ export async function fetchTraceEventsByService(service: string): Promise<RawTra
   return response.data;
 }
 
-export async function fetchTraceServices(): Promise<string[]> {
-  const response = await api.get<string[]>('/traces/services/list');
+export async function fetchTraceEventsByServiceScoped(service: string, includeInternal: boolean): Promise<RawTraceEvent[]> {
+  const response = await api.get<RawTraceEvent[]>('/traces', {
+    params: {
+      service,
+      includeInternal
+    }
+  });
+  return response.data;
+}
+
+export async function fetchTraceServices(includeInternal = false): Promise<string[]> {
+  const response = await api.get<string[]>('/traces/services/list', {
+    params: {
+      includeInternal
+    }
+  });
   return response.data;
 }

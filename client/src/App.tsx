@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Edge, Node } from 'reactflow';
-import { fetchTraceEventsByService, fetchTraceServices } from './api/traces';
+import { fetchTraceEventsByServiceScoped, fetchTraceServices } from './api/traces';
 import { SpanInspector } from './components/SpanInspector';
 import { TopBar } from './components/TopBar';
 import { TraceExplorer } from './components/TraceExplorer';
@@ -8,6 +8,8 @@ import { TraceGraph } from './components/TraceGraph';
 import { TraceQuickJump } from './components/TraceQuickJump';
 import type { RawTraceEvent, SpanViewModel, TraceHealth } from './types/trace';
 import { createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
+
+const INTERNAL_SERVICE_NAMES = new Set(['debug-flow-visualizer-backend', 'jaeger-all-in-one']);
 
 export function App() {
   const [events, setEvents] = useState<RawTraceEvent[]>([]);
@@ -24,10 +26,11 @@ export function App() {
 
   const loadServices = useCallback(async () => {
     try {
-      const discoveredServices = await fetchTraceServices();
+      const discoveredServices = await fetchTraceServices(true);
       setServices(discoveredServices);
       if (!selectedService && discoveredServices.length > 0) {
-        setSelectedService(discoveredServices[0]);
+        const preferred = discoveredServices.find((service) => !INTERNAL_SERVICE_NAMES.has(service)) ?? discoveredServices[0];
+        setSelectedService(preferred);
       }
       if (selectedService && !discoveredServices.includes(selectedService)) {
         setSelectedService(discoveredServices[0]);
@@ -52,7 +55,8 @@ export function App() {
       if (events.length === 0) {
         setLoading(true);
       }
-      const data = await fetchTraceEventsByService(selectedService);
+      const includeInternal = INTERNAL_SERVICE_NAMES.has(selectedService);
+      const data = await fetchTraceEventsByServiceScoped(selectedService, includeInternal);
       setEvents(data);
       if (!activeTraceId && data.length > 0) {
         const firstTraceId = data[0].traceId;
