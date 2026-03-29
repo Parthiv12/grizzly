@@ -1,17 +1,21 @@
-import type { SpanViewModel } from '../types/trace';
-import { formatDuration, formatTime } from '../utils/format';
+import type { SpanViewModel, TraceSummary } from '../types/trace';
+import { formatDuration, formatTime, shortTraceId } from '../utils/format';
 
 interface SpanInspectorProps {
   span?: SpanViewModel;
+  summary?: TraceSummary;
+  spans?: SpanViewModel[];
   onClose?: () => void;
+  onCompareTrace?: () => void;
 }
 
-export function SpanInspector({ span, onClose }: SpanInspectorProps) {
+export function SpanInspector({ span, summary, spans, onClose, onCompareTrace }: SpanInspectorProps) {
+  const isClosed = !span;
   return (
     <aside className="panel inspector-panel">
       <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Span Inspector</h2>
-        {span && (
+        <h2>{isClosed ? 'Trace Overview' : 'Span Inspector'}</h2>
+        {!isClosed && (
           <button 
             type="button" 
             className="button" 
@@ -25,7 +29,9 @@ export function SpanInspector({ span, onClose }: SpanInspectorProps) {
         )}
       </div>
 
-      {!span ? (
+      {isClosed && summary ? (
+        <TraceOverviewPanel summary={summary} spans={spans || []} onCompareTrace={onCompareTrace} />
+      ) : isClosed ? (
         <div className="inspector-empty">
           <div className="inspector-empty-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -78,6 +84,62 @@ export function SpanInspector({ span, onClose }: SpanInspectorProps) {
         </div>
       )}
     </aside>
+  );
+}
+
+function TraceOverviewPanel({ summary, spans, onCompareTrace }: { summary: TraceSummary; spans: SpanViewModel[]; onCompareTrace?: () => void }) {
+  const errorCount = spans.filter(s => s.status === 'error').length;
+  const slowestSpan = spans.reduce((slowest, current) => current.durationMs > slowest.durationMs ? current : slowest, spans[0]);
+  const layers = Array.from(new Set(spans.map(s => s.layer)));
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(summary.traceId);
+  };
+
+  return (
+    <div className="inspector-body trace-overview">
+      <div className={`span-summary status-${summary.health}`}>
+        <div className="span-summary-header">
+          <span className={`status-pill status-${summary.health}`}>{summary.health}</span>
+          <p className="span-subtitle">{summary.startedAt ? formatTime(summary.startedAt) : ''}</p>
+        </div>
+        <p className="span-title">{summary.route || summary.method || summary.traceId}</p>
+      </div>
+
+      <InspectorField label="Method / Route" value={summary.route ? `${summary.method} ${summary.route}` : summary.method} />
+      <InspectorField label="Duration" value={formatDuration(summary.durationMs)} />
+      <InspectorField label="Status" value={summary.health === 'error' ? `${errorCount} errors` : 'Success'} />
+      
+      <div className="inspector-block">
+        <p className="inspector-label">Key Insights</p>
+        <div className="insight-card">
+          {errorCount > 0 ? (
+            <p><span role="img" aria-label="alert">⚠️</span> Failed at <strong>{spans.find(s => s.status === 'error')?.step || 'unknown step'}</strong> layer.</p>
+          ) : slowestSpan ? (
+            <p><span role="img" aria-label="clock">⏱️</span> Slowest span is <strong>{slowestSpan.step}</strong> ({formatDuration(slowestSpan.durationMs)}).</p>
+          ) : (
+            <p><span role="img" aria-label="check">✅</span> Execution completed normally.</p>
+          )}
+        </div>
+      </div>
+
+      <InspectorField label="Layers Touched" value={layers.join(' → ')} />
+      
+      <div className="overview-actions" style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <p className="inspector-label" style={{ marginBottom: '4px' }}>Actions</p>
+        <button className="button button-secondary" onClick={onCompareTrace} style={{ width: '100%', justifyContent: 'center' }}>
+          Compare This Trace
+        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="button button-secondary" onClick={handleCopy} style={{ flex: 1, justifyContent: 'center' }}>
+            Copy Trace ID
+          </button>
+          <button className="button button-secondary" disabled style={{ flex: 1, justifyContent: 'center', opacity: 0.5 }}>
+            Open Metrics
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

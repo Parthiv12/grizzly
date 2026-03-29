@@ -374,7 +374,17 @@ export function App() {
                 replaying={replaying}
               />
             )}
-            <SpanInspector span={selectedSpan} onClose={() => setSelectedNodeId(undefined)} />
+            <SpanInspector 
+              span={selectedSpan} 
+              summary={activeSummary}
+              spans={spans}
+              onClose={() => setSelectedNodeId(undefined)} 
+              onCompareTrace={() => {
+                setCompareTraceAId(activeTraceId);
+                setCompareTraceBId(undefined);
+                setAppMode('compare');
+              }}
+            />
           </>
         ) : (
           <CompareView

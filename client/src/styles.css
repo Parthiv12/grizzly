@@ -1968,3 +1968,30 @@ body {
   padding: 2px 4px;
   border-radius: 4px;
 }
+
+.insight-card {
+  background: rgba(33, 46, 66, 0.4);
+  border: 1px solid rgba(63, 80, 110, 0.4);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #c4d4eb;
+  line-height: 1.5;
+}
+
+.insight-card p {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.insight-card strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.trace-overview .overview-actions button {
+  font-size: 13.5px;
+}
