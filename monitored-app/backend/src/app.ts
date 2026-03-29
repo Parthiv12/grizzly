@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { issuesRouter } from './controllers/issues.controller';
+import { authRouter } from './controllers/auth.controller';
+import { usersRouter } from './controllers/users.controller';
 
 export function createApp() {
   const app = express();
@@ -12,7 +13,8 @@ export function createApp() {
     res.json({ status: 'ok', service: 'monitored-issue-tracker' });
   });
 
-  app.use('/api/issues', issuesRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
 
   return app;
 }

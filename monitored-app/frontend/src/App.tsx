@@ -1,136 +1,102 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 
-type Issue = {
+type User = {
   id: string;
-  title: string;
-  description: string | null;
-  status: 'open' | 'in_progress' | 'closed';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
+  name: string;
+  email: string;
+  created_at: string;
+  role?: string;
 };
 
 export function App() {
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [statusFilter, setStatusFilter] = useState<'all' | Issue['status']>('all');
-  const [query, setQuery] = useState('');
-  const [activeIssueId, setActiveIssueId] = useState<string | undefined>(undefined);
+  const [users, setUsers] = useState<User[]>([]);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newsletter, setNewsletter] = useState(false);
+  
+  const [activeUser, setActiveUser] = useState<User | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  async function loadIssues() {
+  async function loadUsers() {
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
-      const response = await fetch('/api/issues');
+      // Intentional N+1 DB scenario!
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to load users');
       const data = await response.json();
-      setIssues(data.items ?? []);
-    } catch {
-      setError('Failed to load issues');
+      setUsers(data ?? []);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    void loadIssues();
-  }, []);
-
-  useEffect(() => {
-    if (!activeIssueId && issues.length > 0) {
-      setActiveIssueId(issues[0].id);
-      return;
-    }
-    if (activeIssueId && !issues.some((issue) => issue.id === activeIssueId)) {
-      setActiveIssueId(issues[0]?.id);
-    }
-  }, [activeIssueId, issues]);
-
-  const filteredIssues = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return issues.filter((issue) => {
-      const statusMatch = statusFilter === 'all' || issue.status === statusFilter;
-      if (!statusMatch) {
-        return false;
-      }
-      if (!q) {
-        return true;
-      }
-      return (
-        issue.id.toLowerCase().includes(q) ||
-        issue.title.toLowerCase().includes(q) ||
-        (issue.description ?? '').toLowerCase().includes(q)
-      );
-    });
-  }, [issues, query, statusFilter]);
-
-  const activeIssue = useMemo(() => {
-    if (!activeIssueId) {
-      return undefined;
-    }
-    return issues.find((issue) => issue.id === activeIssueId);
-  }, [activeIssueId, issues]);
-
-  const stats = useMemo(() => {
-    return {
-      total: issues.length,
-      open: issues.filter((issue) => issue.status === 'open').length,
-      inProgress: issues.filter((issue) => issue.status === 'in_progress').length,
-      closed: issues.filter((issue) => issue.status === 'closed').length
-    };
-  }, [issues]);
-
-  async function onSubmit(event: FormEvent) {
+  async function onRegister(event: FormEvent) {
     event.preventDefault();
-    if (!title.trim()) {
-      return;
-    }
+    if (!email.trim() || !password) return;
 
     setError(null);
-    setSubmitting(true);
+    setSuccess(null);
+    setLoading(true);
     try {
-      const response = await fetch('/api/issues', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          priority
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          subscribeToNewsletter: newsletter
         })
       });
 
       if (!response.ok) {
-        throw new Error('Request failed');
+        throw new Error('500: Server crashed during registration');
       }
 
-      setTitle('');
-      setDescription('');
-      setPriority('medium');
-      await loadIssues();
-    } catch {
-      setError('Failed to create issue');
+      setSuccess('Successfully registered User!');
+      setName(''); setEmail(''); setPassword('');
+      await loadUsers();
+    } catch (e: any) {
+      setError(e.message);
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   }
 
-  async function updateStatus(id: string, status: Issue['status']) {
+  async function onLogin() {
+    if (!email.trim() || !password) return;
+
     setError(null);
+    setSuccess(null);
+    setLoading(true);
     try {
-      const response = await fetch(`/api/issues/${id}/status`, {
-        method: 'PATCH',
+      // Intentional slow scenario!
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ email: email.trim(), password })
       });
+
       if (!response.ok) {
-        throw new Error('Request failed');
+        throw new Error('401: Invalid Credentials');
       }
-      await loadIssues();
-    } catch {
-      setError('Failed to update issue status');
+      
+      const data = await response.json();
+      setSuccess('Successfully Logged in! (Token received)');
+      setActiveUser(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -140,185 +106,157 @@ export function App() {
         <div className="brand-block">
           <div className="brand-dot" />
           <div>
-            <p className="brand-name">Issue Tracker</p>
+            <p className="brand-name">Auth Center</p>
             <p className="brand-subtitle">Monitored App</p>
           </div>
         </div>
 
         <div className="topbar-controls">
-          <input
-            className="input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search issue id, title, description"
-          />
-          <button type="button" className="button" onClick={() => void loadIssues()}>
-            Refresh
-          </button>
-          <div className="stats-row" aria-label="Issue stats">
-            <span className="top-stat">{stats.total} total</span>
-            <span className="top-stat">{stats.open} open</span>
-            <span className="top-stat">{stats.inProgress} in progress</span>
-            <span className="top-stat top-stat-closed">{stats.closed} closed</span>
-          </div>
+          {activeUser ? (
+            <button type="button" className="button" onClick={() => setActiveUser(null)}>
+              Sign Out
+            </button>
+          ) : (
+            <button type="button" className="button" onClick={() => void loadUsers()}>
+              Fetch Users (GET /api/users)
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="layout-grid">
-        <aside className="panel composer-panel">
-          <div className="panel-header">
-            <h2>Create Issue</h2>
-          </div>
-
-          <form onSubmit={onSubmit} className="form-stack">
-            <label className="field-label" htmlFor="issue-title">
-              Title
-            </label>
-            <input
-              id="issue-title"
-              className="input"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Ex: Null pointer in auth flow"
-            />
-
-            <label className="field-label" htmlFor="issue-description">
-              Description
-            </label>
-            <textarea
-              id="issue-description"
-              className="textarea"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Context, repro steps, expected behavior"
-            />
-
-            <label className="field-label" htmlFor="issue-priority">
-              Priority
-            </label>
-            <select
-              id="issue-priority"
-              className="input"
-              value={priority}
-              onChange={(event) => setPriority(event.target.value as 'low' | 'medium' | 'high')}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-
-            <button type="submit" className="button button-primary" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Issue'}
-            </button>
-          </form>
-        </aside>
-
-        <section className="panel list-panel">
-          <div className="panel-header">
-            <h2>Issue Explorer</h2>
-            <span className="muted">{filteredIssues.length} issues</span>
-          </div>
-
-          <div className="filter-row">
-            <button type="button" className={`chip ${statusFilter === 'all' ? 'chip-active' : ''}`} onClick={() => setStatusFilter('all')}>
-              All
-            </button>
-            <button type="button" className={`chip ${statusFilter === 'open' ? 'chip-active' : ''}`} onClick={() => setStatusFilter('open')}>
-              Open
-            </button>
-            <button
-              type="button"
-              className={`chip ${statusFilter === 'in_progress' ? 'chip-active' : ''}`}
-              onClick={() => setStatusFilter('in_progress')}
-            >
-              In Progress
-            </button>
-            <button type="button" className={`chip ${statusFilter === 'closed' ? 'chip-active' : ''}`} onClick={() => setStatusFilter('closed')}>
-              Closed
-            </button>
-          </div>
-
-          <div className="issue-list">
-            {loading ? <div className="empty-state">Loading issues...</div> : null}
-            {!loading && filteredIssues.length === 0 ? <div className="empty-state">No issues found for this filter.</div> : null}
-
-            {!loading
-              ? filteredIssues.map((issue) => {
-                  const active = issue.id === activeIssueId;
-                  return (
-                    <button
-                      type="button"
-                      key={issue.id}
-                      className={`issue-row ${active ? 'issue-row-active' : ''}`}
-                      onClick={() => setActiveIssueId(issue.id)}
-                    >
-                      <div className="issue-row-line">
-                        <span className="issue-id">#{issue.id}</span>
-                        <span className="issue-title">{issue.title}</span>
-                        <span className={`status-pill status-${issue.status}`}>{issue.status.replace('_', ' ')}</span>
-                      </div>
-                      <div className="issue-row-line issue-row-meta">
-                        <span>{issue.priority}</span>
-                        <span>{new Date(issue.createdAt).toLocaleTimeString()}</span>
-                      </div>
-                    </button>
-                  );
-                })
-              : null}
-          </div>
-        </section>
-
-        <aside className="panel inspector-panel">
-          <div className="panel-header">
-            <h2>Issue Inspector</h2>
-          </div>
-
-          {!activeIssue ? (
-            <div className="empty-state inspector-empty">Select an issue to inspect details.</div>
-          ) : (
-            <div className="inspector-body">
-              <div className="inspector-title-row">
-                <h3>{activeIssue.title}</h3>
-                <span className={`status-pill status-${activeIssue.status}`}>{activeIssue.status.replace('_', ' ')}</span>
-              </div>
-
-              <div className="inspector-block">
-                <p className="inspector-label">Issue ID</p>
-                <p>#{activeIssue.id}</p>
-              </div>
-
-              <div className="inspector-block">
-                <p className="inspector-label">Description</p>
-                <p>{activeIssue.description || 'No description provided.'}</p>
-              </div>
-
-              <div className="inspector-block">
-                <p className="inspector-label">Priority</p>
-                <p className="priority-pill">{activeIssue.priority}</p>
-              </div>
-
-              <div className="inspector-block">
-                <p className="inspector-label">Created</p>
-                <p>{new Date(activeIssue.createdAt).toLocaleString()}</p>
-              </div>
-
-              <div className="status-actions">
-                <button type="button" className="button" onClick={() => void updateStatus(activeIssue.id, 'open')}>
-                  Mark Open
-                </button>
-                <button type="button" className="button" onClick={() => void updateStatus(activeIssue.id, 'in_progress')}>
-                  Mark In Progress
-                </button>
-                <button type="button" className="button" onClick={() => void updateStatus(activeIssue.id, 'closed')}>
-                  Mark Closed
-                </button>
-              </div>
+      {activeUser ? (
+        <main className="layout-grid" style={{ gridTemplateColumns: 'minmax(420px, 1fr)' }}>
+           <section className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="panel-header">
+              <h2>Dashboard for {activeUser.name}</h2>
             </div>
-          )}
-        </aside>
-      </main>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px' }}>
+              <div className="empty-state" style={{ maxWidth: '600px' }}>
+                <h3 style={{ margin: '0 0 12px', color: '#0f172a' }}>Welcome to the Authenticated Dashboard!</h3>
+                <p style={{ margin: 0, color: '#64748b' }}>You are now logged in as {activeUser.email}. Try fetching the dashboard metrics below to see another trace mapped out in TraceLens.</p>
+              </div>
 
-      {error ? <div className="toast-error">{error}</div> : null}
+              <button 
+                type="button" 
+                className="button button-primary" 
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const res = await fetch('/api/users/stats');
+                    setStats(await res.json());
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Fetch Dashboard Stats (GET /api/users/stats)
+              </button>
+
+              {stats && (
+                <div style={{ display: 'flex', gap: '24px', marginTop: '16px' }}>
+                  <div className="panel" style={{ padding: '24px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 700, color: '#2563eb' }}>{stats.activeUsers}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '8px', textTransform: 'uppercase', fontWeight: 600 }}>Active Users</div>
+                  </div>
+                  <div className="panel" style={{ padding: '24px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 700, color: '#2563eb' }}>{stats.newSignups}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '8px', textTransform: 'uppercase', fontWeight: 600 }}>New Signups</div>
+                  </div>
+                  <div className="panel" style={{ padding: '24px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 700, color: '#16a34a' }}>{stats.serverHealth}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '8px', textTransform: 'uppercase', fontWeight: 600 }}>Server Health</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      ) : (
+        <main className="layout-grid">
+          <aside className="panel composer-panel">
+            <div className="panel-header">
+              <h2>Authentication</h2>
+            </div>
+
+            <form onSubmit={onRegister} className="form-stack">
+              <label className="field-label" htmlFor="user-name">Full Name</label>
+              <input
+                id="user-name"
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: John Doe"
+              />
+
+              <label className="field-label" htmlFor="user-email">Email Address</label>
+              <input
+                id="user-email"
+                className="input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+
+              <label className="field-label" htmlFor="user-pass">Password</label>
+              <input
+                id="user-pass"
+                type="password"
+                className="input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="******"
+              />
+
+              <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '12px', color: '#10b981' }}>
+                <input 
+                  type="checkbox" 
+                  checked={newsletter} 
+                  onChange={(e) => setNewsletter(e.target.checked)} 
+                />
+                Subscribe to Newsletter (Bug Generator)
+              </label>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button type="submit" className="button button-primary" style={{ flex: 1 }} disabled={loading}>
+                  Register User
+                </button>
+                <button type="button" className="button" onClick={onLogin} style={{ flex: 1 }} disabled={loading}>
+                  Login (Slow)
+                </button>
+              </div>
+            </form>
+          </aside>
+
+          <section className="panel list-panel" style={{ gridColumn: 'span 2' }}>
+            <div className="panel-header">
+              <h2>User Database</h2>
+              <span className="muted">{users.length} registered</span>
+            </div>
+
+            <div className="issue-list">
+              {loading && !activeUser ? <div className="empty-state">Processing Request...</div> : null}
+              {!loading && users.length === 0 ? <div className="empty-state">No users fetched. Click "Fetch Users" to load dummy data.</div> : null}
+
+              {!loading && users.map((u) => (
+                <div key={u.id} className="issue-row">
+                  <div className="issue-row-line">
+                    <span className="issue-id">{u.id.split('-')[0]}</span>
+                    <span className="issue-title">{u.name} ({u.email})</span>
+                    <span className={`status-pill status-closed`}>Role: {u.role || 'user'}</span>
+                  </div>
+                  <div className="issue-row-line issue-row-meta">
+                    <span>Joined: {new Date(u.created_at).toLocaleTimeString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+      )}
+
+      {error ? <div className="toast-error">🚨 {error}</div> : null}
+      {success ? <div className="toast-error" style={{ background: '#dcfce7', color: '#16a34a', borderColor: '#86efac' }}>✅ {success}</div> : null}
     </div>
   );
 }

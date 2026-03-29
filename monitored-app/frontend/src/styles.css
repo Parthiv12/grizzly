@@ -43,7 +43,9 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 24px;
+  height: 68px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   gap: 16px;
 }
 
@@ -54,8 +56,8 @@ body,
 }
 
 .brand-dot {
-  width: 10px;
-  height: 10px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.1);
@@ -105,28 +107,34 @@ body,
 
 .layout-grid {
   display: grid;
-  grid-template-columns: 320px minmax(420px, 1fr) 360px;
+  grid-template-columns: 360px minmax(420px, 1fr);
+  gap: 24px;
+  padding: 24px;
   height: calc(100vh - 68px);
   min-height: 0;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 .panel {
-  border-right: 1px solid var(--line-soft);
+  border: 1px solid var(--line-soft);
   background: var(--surface-1);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
   min-height: 0;
+  overflow: hidden;
 }
 
-.panel:last-child {
-  border-right: none;
-}
+
 
 .panel-header {
-  height: 52px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line-soft);
+  background: #fbfcfd;
 }
 
 .panel-header h2 {
@@ -149,9 +157,9 @@ body,
 }
 
 .form-stack {
-  padding: 14px;
+  padding: 20px;
   display: grid;
-  gap: 9px;
+  gap: 12px;
   align-content: start;
 }
 
@@ -224,7 +232,7 @@ body,
 
 .list-panel {
   display: grid;
-  grid-template-rows: 52px 54px 1fr;
+  grid-template-rows: 56px 1fr;
 }
 
 .filter-row {
@@ -253,7 +261,7 @@ body,
 
 .issue-list {
   overflow-y: auto;
-  padding: 8px;
+  padding: 16px;
 }
 
 .issue-row {
@@ -263,10 +271,13 @@ body,
   color: inherit;
   text-align: left;
   border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .issue-row:hover {
@@ -286,10 +297,10 @@ body,
 }
 
 .issue-row-meta {
-  margin-top: 7px;
   color: var(--muted);
-  font-size: 12px;
-  justify-content: space-between;
+  font-size: 13px;
+  justify-content: flex-start;
+  padding-top: 4px;
 }
 
 .issue-id {

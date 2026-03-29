@@ -1,8 +1,10 @@
 import { SpanStatusCode, trace, type Attributes } from '@opentelemetry/api';
-import type { RequestTraceMeta } from '../types/issues';
+import type { RequestTraceMeta } from '../types/users';
 
 export const APP_NAME = 'monitored-issue-tracker';
 const tracer = trace.getTracer('monitored-issue-tracker.business');
+
+export { trace };
 
 export interface SpanMeta extends Partial<RequestTraceMeta> {
   layer: 'controller' | 'service' | 'repository' | 'database' | 'external' | 'other';
