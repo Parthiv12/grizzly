@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/traces.ts","./src/components/spaninspector.tsx","./src/components/topbar.tsx","./src/components/traceexplorer.tsx","./src/components/tracegraph.tsx","./src/types/trace.ts","./src/utils/format.ts","./src/utils/trace-transform.ts"],"version":"5.9.3"}

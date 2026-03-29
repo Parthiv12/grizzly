@@ -1,0 +1,39 @@
+import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+
+let sdk: NodeSDK | undefined;
+
+export async function startTelemetry() {
+  if (sdk) {
+    return;
+  }
+
+  if ((process.env.OTEL_LOG_LEVEL ?? '').toUpperCase() === 'DEBUG') {
+    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
+  }
+
+  const otlpBase = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318').replace(/\/$/, '');
+  const traceExporter = new OTLPTraceExporter({ url: `${otlpBase}/v1/traces` });
+
+  sdk = new NodeSDK({
+    traceExporter,
+    resource: resourceFromAttributes({
+      [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'monitored-issue-tracker'
+    }),
+    instrumentations: [getNodeAutoInstrumentations()]
+  });
+
+  await sdk.start();
+}
+
+export async function stopTelemetry() {
+  if (!sdk) {
+    return;
+  }
+  await sdk.shutdown();
+  sdk = undefined;
+}
