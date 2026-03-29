@@ -70,6 +70,9 @@ export function TraceExplorer({
                 <span>{trace.statusCode}</span>
                 <span>{formatDuration(trace.durationMs)}</span>
                 <span>{formatTime(trace.startedAt)}</span>
+                <span className="trace-signal trace-signal-business">B {trace.businessSpanCount}</span>
+                <span className="trace-signal trace-signal-infra">I {trace.infraSpanCount}</span>
+                {trace.hasDatabaseInteraction ? <span className="trace-signal trace-signal-db">DB</span> : null}
               </div>
             </button>
           );

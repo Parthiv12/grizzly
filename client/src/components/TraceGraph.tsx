@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, type NodeProps, Position, Handle, type Edge, type Node } from 'reactflow';
-import type { SpanViewModel, TraceSummary } from '../types/trace';
+import type { SpanViewModel, TraceSummary, TraceViewMode } from '../types/trace';
 import { formatDuration, formatTime, shortTraceId } from '../utils/format';
 
 interface TraceGraphProps {
@@ -9,6 +9,8 @@ interface TraceGraphProps {
   selectedNodeId?: string;
   onSelectNode: (nodeId?: string) => void;
   summary?: TraceSummary;
+  viewMode: TraceViewMode;
+  mostlyInfraTrace: boolean;
 }
 
 interface TraceNodeData {
@@ -36,7 +38,7 @@ function TraceNode({ data, selected }: NodeProps<TraceNodeData>) {
 
 const nodeTypes = { traceNode: TraceNode };
 
-export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary }: TraceGraphProps) {
+export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary, viewMode, mostlyInfraTrace }: TraceGraphProps) {
   const selectedIndex = selectedNodeId ? Number(selectedNodeId.split('-').pop()) : Number.NaN;
 
   const selectedEdges = useMemo(() => {
@@ -65,12 +67,16 @@ export function TraceGraph({ nodes, edges, selectedNodeId, onSelectNode, summary
         <h2>Trace Graph</h2>
         {summary ? (
           <p className="graph-caption">
+            <span className={`view-mode-badge ${viewMode === 'business' ? 'view-mode-business' : 'view-mode-infra'}`}>
+              {viewMode === 'business' ? 'Business Mode' : 'Infra Mode'}
+            </span>{' '}
             {summary.method} {summary.route} • {formatDuration(summary.durationMs)} • {shortTraceId(summary.traceId)}
           </p>
         ) : null}
       </div>
 
       <div className="graph-canvas">
+        {mostlyInfraTrace ? <div className="mode-empty-hint">This trace contains mostly infrastructure spans.</div> : null}
         <div className="layer-rails" aria-hidden>
           <span>Controller</span>
           <span>Service</span>

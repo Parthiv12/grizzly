@@ -6,8 +6,8 @@ import { TopBar } from './components/TopBar';
 import { TraceExplorer } from './components/TraceExplorer';
 import { TraceGraph } from './components/TraceGraph';
 import { TraceQuickJump } from './components/TraceQuickJump';
-import type { RawTraceEvent, SpanViewModel, TraceHealth } from './types/trace';
-import { createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
+import type { RawTraceEvent, SpanViewModel, TraceHealth, TraceViewMode } from './types/trace';
+import { classifySpan, createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
 
 const INTERNAL_SERVICE_NAMES = new Set(['debug-flow-visualizer-backend', 'jaeger-all-in-one']);
 
@@ -19,6 +19,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [live, setLive] = useState(false);
+  const [viewMode, setViewMode] = useState<TraceViewMode>('business');
   const [statusFilter, setStatusFilter] = useState<'all' | TraceHealth>('all');
   const [activeTraceId, setActiveTraceId] = useState<string | undefined>(undefined);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -83,6 +84,10 @@ export function App() {
   }, [selectedService]);
 
   useEffect(() => {
+    setSelectedNodeId(undefined);
+  }, [viewMode]);
+
+  useEffect(() => {
     if (!live) {
       return;
     }
@@ -92,7 +97,7 @@ export function App() {
     return () => window.clearInterval(intervalId);
   }, [live, loadEvents]);
 
-  const traceSummaries = useMemo(() => createTraceSummaries(events), [events]);
+  const traceSummaries = useMemo(() => createTraceSummaries(events, viewMode), [events, viewMode]);
   const groupedTraceEvents = useMemo(() => groupEventsByTraceId(events), [events]);
 
   const summaryByTraceId = useMemo(() => {
@@ -110,15 +115,20 @@ export function App() {
         return true;
       }
       const traceEvents = groupedTraceEvents.get(trace.traceId) ?? [];
-      const hasStepMatch = traceEvents.some((event) => event.step.toLowerCase().includes(q));
+      const searchableEvents = viewMode === 'business' ? traceEvents.filter((event) => classifySpan(event) === 'business') : traceEvents;
+      const hasStepMatch = searchableEvents.some((event) => event.step.toLowerCase().includes(q));
       return (
         trace.traceId.toLowerCase().includes(q) ||
         trace.route.toLowerCase().includes(q) ||
         trace.method.toLowerCase().includes(q) ||
-        hasStepMatch
+        hasStepMatch ||
+        searchableEvents.some((event) => {
+          const operation = String(event.metadata?.operation ?? '').toLowerCase();
+          return operation.includes(q);
+        })
       );
     });
-  }, [groupedTraceEvents, query, statusFilter, traceSummaries]);
+  }, [groupedTraceEvents, query, statusFilter, traceSummaries, viewMode]);
 
   useEffect(() => {
     if (!activeTraceId && filteredTraces.length > 0) {
@@ -138,8 +148,9 @@ export function App() {
     return groupedTraceEvents.get(activeTraceId) ?? [];
   }, [activeTraceId, groupedTraceEvents]);
 
-  const spans = useMemo<SpanViewModel[]>(() => createSpanView(activeTraceEvents), [activeTraceEvents]);
+  const spans = useMemo<SpanViewModel[]>(() => createSpanView(activeTraceEvents, viewMode), [activeTraceEvents, viewMode]);
   const graph = useMemo<{ nodes: Node[]; edges: Edge[] }>(() => createGraph(spans), [spans]);
+  const mostlyInfraTrace = useMemo(() => viewMode === 'business' && activeTraceEvents.length > 0 && spans.length === 0, [activeTraceEvents.length, spans.length, viewMode]);
 
   const selectedSpan = useMemo(() => spans.find((span) => span.id === selectedNodeId), [selectedNodeId, spans]);
   const activeSummary = activeTraceId ? summaryByTraceId.get(activeTraceId) : undefined;
@@ -186,11 +197,13 @@ export function App() {
   }, [activeTraceId, filteredTraces]);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell view-${viewMode}`}>
       <TopBar
         services={services}
         selectedService={selectedService}
         onServiceChange={setSelectedService}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         query={query}
         onQueryChange={setQuery}
         live={live}
@@ -226,6 +239,8 @@ export function App() {
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             summary={activeSummary}
+            viewMode={viewMode}
+            mostlyInfraTrace={mostlyInfraTrace}
           />
         )}
 

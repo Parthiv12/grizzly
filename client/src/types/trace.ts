@@ -2,6 +2,7 @@ import type { Edge, Node } from 'reactflow';
 
 export type EventLayer = 'controller' | 'service' | 'repository' | 'database';
 export type EventStatus = 'success' | 'error';
+export type TraceViewMode = 'business' | 'infra';
 
 export type GraphLayer = 'controller' | 'service' | 'repository' | 'db' | 'infra';
 
@@ -25,6 +26,10 @@ export interface TraceSummary {
   startedAt: number;
   health: TraceHealth;
   eventCount: number;
+  businessSpanCount: number;
+  infraSpanCount: number;
+  hasDatabaseInteraction: boolean;
+  priorityScore: number;
 }
 
 export interface SpanViewModel {

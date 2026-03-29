@@ -2,6 +2,8 @@ interface TopBarProps {
   services: string[];
   selectedService?: string;
   onServiceChange: (service: string) => void;
+  viewMode: 'business' | 'infra';
+  onViewModeChange: (mode: 'business' | 'infra') => void;
   query: string;
   onQueryChange: (value: string) => void;
   live: boolean;
@@ -17,6 +19,8 @@ export function TopBar({
   services,
   selectedService,
   onServiceChange,
+  viewMode,
+  onViewModeChange,
   query,
   onQueryChange,
   live,
@@ -38,14 +42,33 @@ export function TopBar({
       </div>
 
       <div className="topbar-controls">
-        <select className="input input-select" value={selectedService ?? ''} onChange={(event) => onServiceChange(event.target.value)}>
-          {services.length === 0 ? <option value="">No services</option> : null}
-          {services.map((service) => (
-            <option key={service} value={service}>
-              {service}
-            </option>
-          ))}
-        </select>
+        <div className="control-cluster">
+          <select className="input input-select" value={selectedService ?? ''} onChange={(event) => onServiceChange(event.target.value)}>
+            {services.length === 0 ? <option value="">No services</option> : null}
+            {services.map((service) => (
+              <option key={service} value={service}>
+                {service}
+              </option>
+            ))}
+          </select>
+
+          <div className="mode-toggle" role="tablist" aria-label="Trace view mode">
+            <button
+              type="button"
+              className={`mode-chip ${viewMode === 'business' ? 'mode-chip-active' : ''}`}
+              onClick={() => onViewModeChange('business')}
+            >
+              Business Mode
+            </button>
+            <button
+              type="button"
+              className={`mode-chip ${viewMode === 'infra' ? 'mode-chip-active' : ''}`}
+              onClick={() => onViewModeChange('infra')}
+            >
+              Infra Mode
+            </button>
+          </div>
+        </div>
 
         <input
           className="input"
