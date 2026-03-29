@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Edge, Node } from 'reactflow';
-import { fetchAllTraceEvents } from './api/traces';
+import { fetchTraceEventsByService, fetchTraceServices } from './api/traces';
 import { SpanInspector } from './components/SpanInspector';
 import { TopBar } from './components/TopBar';
 import { TraceExplorer } from './components/TraceExplorer';
@@ -11,6 +11,8 @@ import { createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId
 
 export function App() {
   const [events, setEvents] = useState<RawTraceEvent[]>([]);
+  const [services, setServices] = useState<string[]>([]);
+  const [selectedService, setSelectedService] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -20,13 +22,37 @@ export function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
 
+  const loadServices = useCallback(async () => {
+    try {
+      const discoveredServices = await fetchTraceServices();
+      setServices(discoveredServices);
+      if (!selectedService && discoveredServices.length > 0) {
+        setSelectedService(discoveredServices[0]);
+      }
+      if (selectedService && !discoveredServices.includes(selectedService)) {
+        setSelectedService(discoveredServices[0]);
+      }
+    } catch {
+      setServices([]);
+      if (!selectedService) {
+        setError('Failed to load trace services from backend.');
+      }
+    }
+  }, [selectedService]);
+
   const loadEvents = useCallback(async () => {
+    if (!selectedService) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setError(null);
       if (events.length === 0) {
         setLoading(true);
       }
-      const data = await fetchAllTraceEvents();
+      const data = await fetchTraceEventsByService(selectedService);
       setEvents(data);
       if (!activeTraceId && data.length > 0) {
         const firstTraceId = data[0].traceId;
@@ -37,11 +63,20 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [activeTraceId, events.length]);
+  }, [activeTraceId, events.length, selectedService]);
+
+  useEffect(() => {
+    void loadServices();
+  }, [loadServices]);
 
   useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    setActiveTraceId(undefined);
+    setSelectedNodeId(undefined);
+  }, [selectedService]);
 
   useEffect(() => {
     if (!live) {
@@ -149,6 +184,9 @@ export function App() {
   return (
     <div className="app-shell">
       <TopBar
+        services={services}
+        selectedService={selectedService}
+        onServiceChange={setSelectedService}
         query={query}
         onQueryChange={setQuery}
         live={live}
@@ -192,7 +230,7 @@ export function App() {
 
       <TraceQuickJump
         open={quickJumpOpen}
-        traces={traceSummaries}
+        traces={filteredTraces}
         activeTraceId={activeTraceId}
         onClose={() => setQuickJumpOpen(false)}
         onSelectTrace={(traceId) => {

@@ -38,31 +38,43 @@ type JaegerResponse = {
 @Injectable()
 export class JaegerTracesService {
   private readonly baseUrl = process.env.JAEGER_QUERY_BASE_URL ?? 'http://localhost:16686';
-  private readonly serviceName = process.env.JAEGER_SERVICE_NAME ?? process.env.OTEL_SERVICE_NAME ?? 'debug-flow-visualizer-backend';
+  private readonly defaultServiceName = process.env.JAEGER_SERVICE_NAME ?? process.env.OTEL_SERVICE_NAME ?? 'debug-flow-visualizer-backend';
   private readonly lookback = process.env.JAEGER_LOOKBACK ?? '1h';
   private readonly limit = this.parsePositiveInt(process.env.JAEGER_TRACE_LIMIT, 50);
 
-  async getAllTraceEvents(): Promise<TraceEvent[]> {
+  async getAllTraceEvents(serviceName?: string): Promise<TraceEvent[]> {
+    const resolvedServiceName = serviceName?.trim() || this.defaultServiceName;
     const url = new URL('/api/traces', this.baseUrl);
-    url.searchParams.set('service', this.serviceName);
+    url.searchParams.set('service', resolvedServiceName);
     url.searchParams.set('lookback', this.lookback);
     url.searchParams.set('limit', String(this.limit));
 
     const response = await this.getJson<JaegerResponse>(url);
-    return this.mapTracesToEvents(response.data ?? []);
+    return this.mapTracesToEvents(response.data ?? [], resolvedServiceName);
   }
 
-  async getTraceEvents(traceId: string): Promise<TraceEvent[]> {
+  async getTraceEvents(traceId: string, serviceName?: string): Promise<TraceEvent[]> {
+    const resolvedServiceName = serviceName?.trim() || this.defaultServiceName;
     const url = new URL(`/api/traces/${traceId}`, this.baseUrl);
     const response = await this.getJson<JaegerResponse>(url);
-    return this.mapTracesToEvents(response.data ?? []).filter((event) => event.traceId === traceId);
+    return this.mapTracesToEvents(response.data ?? [], resolvedServiceName).filter((event) => event.traceId === traceId);
   }
 
-  private mapTracesToEvents(traces: JaegerTrace[]): TraceEvent[] {
+  async getServices(): Promise<string[]> {
+    const url = new URL('/api/services', this.baseUrl);
+    const response = await this.getJson<{ data?: string[] }>(url);
+    return (response.data ?? []).filter((service) => typeof service === 'string' && service.trim().length > 0);
+  }
+
+  private mapTracesToEvents(traces: JaegerTrace[], selectedService: string): TraceEvent[] {
     const events: TraceEvent[] = [];
 
     for (const traceItem of traces) {
       const spans = traceItem.spans ?? [];
+
+      if (!this.traceBelongsToService(traceItem, selectedService)) {
+        continue;
+      }
 
       const serverSpan = spans
         .filter((span) => this.tagMap(span.tags).get('span.kind') === 'server')
@@ -75,6 +87,7 @@ export class JaegerTracesService {
         const method = this.tagString(tags, 'http.method') ?? 'GET';
         const url = this.tagString(tags, 'http.target') ?? this.tagString(tags, 'http.route') ?? '/unknown';
         const statusCode = this.tagNumber(tags, 'http.status_code') ?? 200;
+        const process = traceItem.processes?.[serverSpan.processID];
 
         events.push({
           traceId: traceItem.traceID,
@@ -84,7 +97,8 @@ export class JaegerTracesService {
           timestamp: startTs,
           metadata: {
             method,
-            url
+            url,
+            serviceName: process?.serviceName ?? selectedService
           }
         });
 
@@ -96,13 +110,20 @@ export class JaegerTracesService {
           timestamp: startTs + durationMs,
           metadata: {
             statusCode,
-            duration: durationMs
+            duration: durationMs,
+            method,
+            url,
+            serviceName: process?.serviceName ?? selectedService
           }
         });
       }
 
       for (const span of spans) {
         const process = traceItem.processes?.[span.processID];
+        if (process?.serviceName && process.serviceName !== selectedService) {
+          continue;
+        }
+
         const tags = this.tagMap(span.tags);
         const timestamp = Math.floor(span.startTime / 1000);
         const durationMs = Math.max(0, Math.round(span.duration / 1000));
@@ -117,7 +138,7 @@ export class JaegerTracesService {
           timestamp,
           metadata: {
             operation: span.operationName,
-            serviceName: process?.serviceName ?? this.serviceName,
+            serviceName: process?.serviceName ?? selectedService,
             spanId: span.spanID,
             duration: durationMs,
             method: this.tagString(tags, 'http.method'),
@@ -129,6 +150,27 @@ export class JaegerTracesService {
     }
 
     return events.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  private traceBelongsToService(traceItem: JaegerTrace, selectedService: string): boolean {
+    if (!selectedService) {
+      return true;
+    }
+
+    const spans = traceItem.spans ?? [];
+    const rootServerSpan = spans
+      .filter((span) => this.tagMap(span.tags).get('span.kind') === 'server')
+      .sort((a, b) => a.startTime - b.startTime)[0];
+
+    if (rootServerSpan) {
+      const process = traceItem.processes?.[rootServerSpan.processID];
+      return process?.serviceName === selectedService;
+    }
+
+    return spans.some((span) => {
+      const process = traceItem.processes?.[span.processID];
+      return process?.serviceName === selectedService;
+    });
   }
 
   private inferLayer(operationName: string, tags: Map<string, string | number | boolean>): Layer {

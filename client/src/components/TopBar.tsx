@@ -1,4 +1,7 @@
 interface TopBarProps {
+  services: string[];
+  selectedService?: string;
+  onServiceChange: (service: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
   live: boolean;
@@ -10,7 +13,20 @@ interface TopBarProps {
   slow: number;
 }
 
-export function TopBar({ query, onQueryChange, live, onToggleLive, onRefresh, onOpenQuickJump, total, errors, slow }: TopBarProps) {
+export function TopBar({
+  services,
+  selectedService,
+  onServiceChange,
+  query,
+  onQueryChange,
+  live,
+  onToggleLive,
+  onRefresh,
+  onOpenQuickJump,
+  total,
+  errors,
+  slow
+}: TopBarProps) {
   return (
     <header className="topbar">
       <div className="brand-block">
@@ -22,10 +38,13 @@ export function TopBar({ query, onQueryChange, live, onToggleLive, onRefresh, on
       </div>
 
       <div className="topbar-controls">
-        <select className="input input-select" defaultValue="local">
-          <option value="local">Local</option>
-          <option value="staging">Staging</option>
-          <option value="prod">Production</option>
+        <select className="input input-select" value={selectedService ?? ''} onChange={(event) => onServiceChange(event.target.value)}>
+          {services.length === 0 ? <option value="">No services</option> : null}
+          {services.map((service) => (
+            <option key={service} value={service}>
+              {service}
+            </option>
+          ))}
         </select>
 
         <input

@@ -10,3 +10,17 @@ export async function fetchAllTraceEvents(): Promise<RawTraceEvent[]> {
   const response = await api.get<RawTraceEvent[]>('/traces');
   return response.data;
 }
+
+export async function fetchTraceEventsByService(service: string): Promise<RawTraceEvent[]> {
+  const response = await api.get<RawTraceEvent[]>('/traces', {
+    params: {
+      service
+    }
+  });
+  return response.data;
+}
+
+export async function fetchTraceServices(): Promise<string[]> {
+  const response = await api.get<string[]>('/traces/services/list');
+  return response.data;
+}
