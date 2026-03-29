@@ -12,8 +12,8 @@ export function MetricsPanel({ traceId, onClose }: MetricsPanelProps) {
   const { data, loading, error } = useTraceMetrics(traceId, window);
 
   return (
-    <aside className="panel metrics-panel" style={{ width: '420px', display: 'flex', flexDirection: 'column' }}>
-      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <aside className="panel metrics-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', borderBottom: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Metrics Context</h2>
         <button 
           type="button" 
