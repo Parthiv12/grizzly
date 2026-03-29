@@ -9,6 +9,8 @@ async function bootstrap() {
   await startTelemetry();
 
   const app = await NestFactory.create(AppModule);
+  app.enableCors(); // This opens port 3000 to Vercel!
+  
   const tracingService = app.get(TracingService);
   app.useGlobalInterceptors(new TracingInterceptor(tracingService));
 

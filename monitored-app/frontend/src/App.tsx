@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect, useState } from 'react';
 
 type Product = {
@@ -19,10 +20,10 @@ export function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  
+
   const [forceInventoryFailure, setForceInventoryFailure] = useState(false);
   const [forcePaymentLatency, setForcePaymentLatency] = useState(false);
-  
+
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,16 +51,16 @@ export function App() {
 
   async function loadOrders() {
     try {
-      const resp = await fetch('/api/checkout/orders');
+      const resp = await fetch(`${import.meta.env.VITE_API_BASE ?? ''}/api/checkout/orders`);
       if (resp.ok) setRecentOrders(await resp.json());
-    } catch (e) {}
+    } catch (e) { }
   }
 
   async function loadProducts() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/products');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE ?? ''}/api/products`);
       if (!response.ok) throw new Error('Failed to load products');
       const data = await response.json();
       setProducts(data ?? []);
@@ -95,7 +96,7 @@ export function App() {
     setCheckoutLoading(true);
 
     try {
-      const response = await fetch('/api/checkout', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE ?? ''}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,10 +134,10 @@ export function App() {
 
         <div className="topbar-controls" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {activeUser ? (
-             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>Hello, {activeUser.name}</span>
-                <button type="button" className="button" style={{ background: '#f8fafc', fontWeight: 600, padding: '6px 12px' }} onClick={() => setActiveUser(null)}>Sign Out</button>
-             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>Hello, {activeUser.name}</span>
+              <button type="button" className="button" style={{ background: '#f8fafc', fontWeight: 600, padding: '6px 12px' }} onClick={() => setActiveUser(null)}>Sign Out</button>
+            </div>
           ) : (
             <button type="button" className="button button-primary" style={{ fontWeight: 600 }} onClick={() => setShowLogin(true)}>
               Sign In
@@ -152,10 +153,10 @@ export function App() {
       <main className="layout-grid" style={{ gridTemplateColumns: '1fr 360px', alignItems: 'stretch' }}>
         <section className="panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-             <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#0f172a', margin: 0 }}>Developer Swag Store</h2>
-             <button type="button" className="button" onClick={loadProducts} disabled={loading}>
-                Refresh Catalog
-             </button>
+            <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#0f172a', margin: 0 }}>Developer Swag Store</h2>
+            <button type="button" className="button" onClick={loadProducts} disabled={loading}>
+              Refresh Catalog
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px', width: '100%' }}>
@@ -204,7 +205,7 @@ export function App() {
 
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginBottom: '12px', textTransform: 'uppercase' }}>Demo Bug Toggles (Trace Config)</div>
-              
+
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '16px', color: '#ef4444', fontWeight: 500 }}>
                 <input type="checkbox" checked={forceInventoryFailure} onChange={(e) => setForceInventoryFailure(e.target.checked)} style={{ width: '16px', height: '16px' }} />
                 Force Out-of-Stock (500 Error)
@@ -216,10 +217,10 @@ export function App() {
               </label>
             </div>
 
-            <button 
-              type="button" 
-              className="button button-primary" 
-              style={{ width: '100%', padding: '14px', fontSize: '16px', fontWeight: 600, borderRadius: '8px' }} 
+            <button
+              type="button"
+              className="button button-primary"
+              style={{ width: '100%', padding: '14px', fontSize: '16px', fontWeight: 600, borderRadius: '8px' }}
               disabled={cart.length === 0 || checkoutLoading}
               onClick={onCheckout}
             >
@@ -261,7 +262,7 @@ export function App() {
               e.preventDefault();
               setError(null); setSuccess(null); setLoginLoading(true);
               try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE ?? ''}/api/auth/login`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ email: loginEmail, password: loginPassword, forceSlowDb })
@@ -282,10 +283,10 @@ export function App() {
             }} className="form-stack">
               <label className="field-label">Email Address</label>
               <input className="input" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
-              
+
               <label className="field-label">Password</label>
               <input className="input" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-              
+
               <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '16px', color: '#f59e0b', fontWeight: 500 }}>
                 <input type="checkbox" checked={forceSlowDb} onChange={(e) => {
                   setForceSlowDb(e.target.checked);
