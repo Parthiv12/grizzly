@@ -1,6 +1,6 @@
 import type { TraceContextMetrics } from '../types/metrics';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE ?? '/api';
 
 export async function fetchTraceContextMetrics(traceId: string, window: string = '15m'): Promise<TraceContextMetrics> {
   const response = await fetch(`${API_BASE_URL}/metrics/trace/${traceId}/context?window=${window}`);
