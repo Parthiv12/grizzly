@@ -11,11 +11,28 @@ import { IssuesController } from './issues/issues.controller';
 import { IssuesRepository } from './issues/issues.repository';
 import { JaegerTracesService } from './traces/jaeger-traces.service';
 import { TraceSummaryService } from './traces/trace-summary.service';
+import { MetricsController } from './metrics/metrics.controller';
+import { MetricsService } from './metrics/metrics.service';
+import { HistoryMetricsProvider } from './metrics/history-metrics.provider';
+import { MetricsProvider } from './metrics/metrics.provider';
 
 @Module({
   imports: [],
-  controllers: [AppController, AuthController, TracesController, IssuesController],
-  providers: [AuthService, UserRepository, TracingService, DatabaseService, IssuesRepository, JaegerTracesService, TraceSummaryService]
+  controllers: [AppController, AuthController, TracesController, IssuesController, MetricsController],
+  providers: [
+    AuthService, 
+    UserRepository, 
+    TracingService, 
+    DatabaseService, 
+    IssuesRepository, 
+    JaegerTracesService, 
+    TraceSummaryService,
+    MetricsService,
+    {
+      provide: MetricsProvider,
+      useClass: HistoryMetricsProvider
+    }
+  ]
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

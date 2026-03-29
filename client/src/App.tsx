@@ -7,6 +7,7 @@ import { TraceExplorer } from './components/TraceExplorer';
 import { TraceGraph } from './components/TraceGraph';
 import { TraceQuickJump } from './components/TraceQuickJump';
 import { CompareView } from './components/CompareView';
+import { MetricsPanel } from './components/metrics/MetricsPanel';
 import type { RawTraceEvent, SpanViewModel, TraceHealth, TraceViewMode } from './types/trace';
 import { classifySpan, createGraph, createSpanView, createTraceSummaries, groupEventsByTraceId } from './utils/trace-transform';
 import { executeReplayRequest, isReplaySafe } from './features/compare/replay/replayLogic';
@@ -27,6 +28,7 @@ export function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [autoSelectNew, setAutoSelectNew] = useState(false);
   const [isGraphHovered, setIsGraphHovered] = useState(false);
   const [replaying, setReplaying] = useState(false);
@@ -343,6 +345,7 @@ export function App() {
           onSelectTrace={(traceId) => {
             setActiveTraceId(traceId);
             setSelectedNodeId(undefined);
+            setMetricsOpen(false);
           }}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
@@ -366,7 +369,12 @@ export function App() {
                 nodes={graph.nodes}
                 edges={graph.edges}
                 selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId}
+                onSelectNode={(id) => {
+                  setSelectedNodeId(id);
+                  if (id) {
+                    setMetricsOpen(false);
+                  }
+                }}
                 summary={activeSummary}
                 viewMode={viewMode}
                 mostlyInfraTrace={mostlyInfraTrace}
@@ -377,17 +385,25 @@ export function App() {
                 autoFocus={autoSelectNew}
               />
             )}
-            <SpanInspector 
-              span={selectedSpan} 
-              summary={activeSummary}
-              spans={spans}
-              onClose={() => setSelectedNodeId(undefined)} 
-              onCompareTrace={() => {
-                setCompareTraceAId(activeTraceId);
-                setCompareTraceBId(undefined);
-                setAppMode('compare');
-              }}
-            />
+            {metricsOpen && activeTraceId ? (
+              <MetricsPanel traceId={activeTraceId} onClose={() => setMetricsOpen(false)} />
+            ) : (
+              <SpanInspector 
+                span={selectedSpan} 
+                summary={activeSummary}
+                spans={spans}
+                onClose={() => setSelectedNodeId(undefined)} 
+                onCompareTrace={() => {
+                  setCompareTraceAId(activeTraceId);
+                  setCompareTraceBId(undefined);
+                  setAppMode('compare');
+                }}
+                onOpenMetrics={() => {
+                  setMetricsOpen(true);
+                  setSelectedNodeId(undefined); // Close regular inspector
+                }}
+              />
+            )}
           </>
         ) : (
           <CompareView

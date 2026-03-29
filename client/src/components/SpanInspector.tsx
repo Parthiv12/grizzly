@@ -7,9 +7,10 @@ interface SpanInspectorProps {
   spans?: SpanViewModel[];
   onClose?: () => void;
   onCompareTrace?: () => void;
+  onOpenMetrics?: () => void;
 }
 
-export function SpanInspector({ span, summary, spans, onClose, onCompareTrace }: SpanInspectorProps) {
+export function SpanInspector({ span, summary, spans, onClose, onCompareTrace, onOpenMetrics }: SpanInspectorProps) {
   const isClosed = !span;
   return (
     <aside className="panel inspector-panel">
@@ -30,7 +31,7 @@ export function SpanInspector({ span, summary, spans, onClose, onCompareTrace }:
       </div>
 
       {isClosed && summary ? (
-        <TraceOverviewPanel summary={summary} spans={spans || []} onCompareTrace={onCompareTrace} />
+        <TraceOverviewPanel summary={summary} spans={spans || []} onCompareTrace={onCompareTrace} onOpenMetrics={onOpenMetrics} />
       ) : isClosed ? (
         <div className="inspector-empty">
           <div className="inspector-empty-icon">
@@ -87,7 +88,7 @@ export function SpanInspector({ span, summary, spans, onClose, onCompareTrace }:
   );
 }
 
-function TraceOverviewPanel({ summary, spans, onCompareTrace }: { summary: TraceSummary; spans: SpanViewModel[]; onCompareTrace?: () => void }) {
+function TraceOverviewPanel({ summary, spans, onCompareTrace, onOpenMetrics }: { summary: TraceSummary; spans: SpanViewModel[]; onCompareTrace?: () => void; onOpenMetrics?: () => void }) {
   const errorCount = spans.filter(s => s.status === 'error').length;
   const slowestSpan = spans.reduce((slowest, current) => current.durationMs > slowest.durationMs ? current : slowest, spans[0]);
   const layers = Array.from(new Set(spans.map(s => s.layer)));
@@ -134,7 +135,7 @@ function TraceOverviewPanel({ summary, spans, onCompareTrace }: { summary: Trace
           <button className="button button-secondary" onClick={handleCopy} style={{ flex: 1, justifyContent: 'center' }}>
             Copy Trace ID
           </button>
-          <button className="button button-secondary" disabled style={{ flex: 1, justifyContent: 'center', opacity: 0.5 }}>
+          <button className="button button-secondary" onClick={onOpenMetrics} style={{ flex: 1, justifyContent: 'center' }}>
             Open Metrics
           </button>
         </div>
