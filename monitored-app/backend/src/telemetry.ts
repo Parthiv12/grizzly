@@ -25,7 +25,7 @@ export async function startTelemetry() {
   sdk = new NodeSDK({
     traceExporter,
     resource: resourceFromAttributes({
-      [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'monitored-issue-tracker'
+      [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME ?? 'monitored-ecommerce'
     }),
     instrumentations: [getNodeAutoInstrumentations()]
   });

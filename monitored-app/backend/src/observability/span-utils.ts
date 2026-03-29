@@ -1,17 +1,25 @@
 import { SpanStatusCode, trace, type Attributes } from '@opentelemetry/api';
-import type { RequestTraceMeta } from '../types/users';
 
-export const APP_NAME = 'monitored-issue-tracker';
-const tracer = trace.getTracer('monitored-issue-tracker.business');
+export const APP_NAME = 'monitored-ecommerce';
+const tracer = trace.getTracer('monitored-ecommerce.business');
 
 export { trace };
 
-export interface SpanMeta extends Partial<RequestTraceMeta> {
+export interface SpanMeta {
+  httpMethod?: string;
+  httpUrl?: string;
+  httpRoute?: string;
+  httpBody?: any;
+  httpHeaders?: Record<string, string | string[] | undefined>;
+  
   layer: 'controller' | 'service' | 'repository' | 'database' | 'external' | 'other';
   resource: string;
   operation: string;
   dbOperation?: string;
   dbSystem?: string;
+
+  // Generic key-value pairs for extra attributes
+  [key: string]: any;
 }
 
 export async function withBusinessSpan<T>(name: string, meta: SpanMeta, work: () => Promise<T>): Promise<T> {
@@ -56,10 +64,10 @@ function buildAttributes(meta: SpanMeta): Attributes {
     attributes['http.url'] = meta.httpUrl;
   }
   if (meta.httpBody) {
-    attributes['http.request.body'] = meta.httpBody;
+    attributes['http.request.body'] = typeof meta.httpBody === 'string' ? meta.httpBody : JSON.stringify(meta.httpBody);
   }
   if (meta.httpHeaders) {
-    attributes['http.request.headers'] = meta.httpHeaders;
+    attributes['http.request.headers'] = JSON.stringify(meta.httpHeaders);
   }
 
   return attributes;
