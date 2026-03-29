@@ -14,11 +14,11 @@ export function MetricsPanel({ traceId, onClose }: MetricsPanelProps) {
   return (
     <aside className="panel metrics-panel" style={{ width: '420px', display: 'flex', flexDirection: 'column' }}>
       <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Metrics Context</h2>
+        <h2 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>Metrics Context</h2>
         <button 
           type="button" 
-          className="button" 
-          style={{ width: '32px', height: '32px', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          className="button button-secondary" 
+          style={{ width: '28px', height: '28px', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', marginLeft: 'auto' }}
           onClick={onClose}
           aria-label="Close Metrics"
           title="Close Metrics"

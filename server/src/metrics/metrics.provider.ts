@@ -34,6 +34,6 @@ export interface TraceContextMetrics {
 }
 
 export abstract class MetricsProvider {
-  abstract getRouteMetrics(route: string, window: string): Promise<RouteMetrics>;
+  abstract getRouteMetrics(route: string, window: string, service?: string): Promise<RouteMetrics>;
   abstract getServiceMetrics(service: string, window: string): Promise<ServiceMetrics>;
 }

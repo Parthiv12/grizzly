@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { MetricsProvider, RouteMetrics, ServiceMetrics } from './metrics.provider';
-import { TracingService } from '../common/tracing/tracing.service';
+import { JaegerTracesService } from '../traces/jaeger-traces.service';
 
 @Injectable()
 export class HistoryMetricsProvider implements MetricsProvider {
-  constructor(private readonly tracing: TracingService) {}
+  constructor(private readonly jaeger: JaegerTracesService) {}
 
-  async getRouteMetrics(route: string, window: string): Promise<RouteMetrics> {
-    const traces = this.tracing.getAllTraces();
+  async getRouteMetrics(route: string, window: string, service?: string): Promise<RouteMetrics> {
+    const traces = await this.jaeger.getAllTraceEvents(service);
     
     // Group purely based on traceId for a primitive aggregation 
     // In a real prom cluster, we'd query: sum(rate(http_requests_total{route="..."}[...])) 
@@ -70,7 +70,7 @@ export class HistoryMetricsProvider implements MetricsProvider {
   }
 
   async getServiceMetrics(service: string, window: string): Promise<ServiceMetrics> {
-    const traces = this.tracing.getAllTraces();
+    const traces = await this.jaeger.getAllTraceEvents(service);
     
     // Aggregate by service
     let requestCount = 0;

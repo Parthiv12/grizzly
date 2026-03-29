@@ -31,7 +31,7 @@ export class MetricsService {
     if (routeParts.length > 1) route = routeParts[1];
 
     const [routeMetrics, serviceMetrics] = await Promise.all([
-      this.provider.getRouteMetrics(route, window),
+      this.provider.getRouteMetrics(route, window, service),
       this.provider.getServiceMetrics(service, window)
     ]);
 
