@@ -10,11 +10,12 @@ import { DatabaseService } from './common/database/database.service';
 import { IssuesController } from './issues/issues.controller';
 import { IssuesRepository } from './issues/issues.repository';
 import { JaegerTracesService } from './traces/jaeger-traces.service';
+import { TraceSummaryService } from './traces/trace-summary.service';
 
 @Module({
   imports: [],
   controllers: [AppController, AuthController, TracesController, IssuesController],
-  providers: [AuthService, UserRepository, TracingService, DatabaseService, IssuesRepository, JaegerTracesService]
+  providers: [AuthService, UserRepository, TracingService, DatabaseService, IssuesRepository, JaegerTracesService, TraceSummaryService]
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -26,6 +26,7 @@ export function App() {
   const [activeTraceId, setActiveTraceId] = useState<string | undefined>(undefined);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [autoSelectNew, setAutoSelectNew] = useState(false);
   const [isGraphHovered, setIsGraphHovered] = useState(false);
   const [replaying, setReplaying] = useState(false);
@@ -332,6 +333,7 @@ export function App() {
         onToggleAutoSelect={() => setAutoSelectNew(!autoSelectNew)}
         appMode={appMode}
         onAppModeChange={setAppMode}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <main className={`layout-grid ${appMode === 'compare' ? 'layout-grid-compare' : ''}`}>
@@ -372,6 +374,7 @@ export function App() {
                 onMouseLeave={() => setIsGraphHovered(false)}
                 onReplay={handleReplay}
                 replaying={replaying}
+                autoFocus={autoSelectNew}
               />
             )}
             <SpanInspector 
@@ -396,6 +399,7 @@ export function App() {
             summaryA={compareTraceAId ? summaryByTraceId.get(compareTraceAId) : undefined}
             summaryB={compareTraceBId ? summaryByTraceId.get(compareTraceBId) : undefined}
             viewMode={viewMode}
+            autoFocus={autoSelectNew}
             onSetCompareA={setCompareTraceAId}
             onSetCompareB={setCompareTraceBId}
             onSwap={() => {
@@ -422,6 +426,47 @@ export function App() {
           setSelectedNodeId(undefined);
         }}
       />
+
+      {helpOpen && (
+        <div className="quick-jump-overlay">
+          <div className="quick-jump-dialog help-dialog" style={{ padding: '24px', maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ color: '#fff' }}>TraceLens Features & Usage</h2>
+              <button className="button" style={{ padding: '4px', height: '28px', width: '28px' }} onClick={() => setHelpOpen(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <div style={{ color: '#c4d4eb', lineHeight: '1.6', fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
+                  <span className="button-live" style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '11px', border: '1px solid', color: 'color-mix(in srgb, var(--success) 80%, white 20%)', borderColor: 'color-mix(in srgb, var(--success) 55%, var(--line) 45%)' }}>Live On</span> Streaming
+                </span>
+                <p>When Live is ON, TraceLens constantly polls your backend for new traffic in the background. The trace list will magically update as soon as you hit your API.</p>
+              </div>
+
+              <div>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                  Auto-focus Camera
+                </span>
+                <p>Forced camera snapping. When new traces stream in, Auto-focus tells the map to automatically fly to that new entry. In Compare mode, it ensures the camera focuses directly on the <strong>Divergence point</strong> or changed nodes.</p>
+              </div>
+
+              <div>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
+                  Keyboard Shortcuts
+                </span>
+                <ul style={{ paddingLeft: '20px', margin: 0 }}>
+                  <li><strong>J / K</strong> (or Up/Down): Navigate between traces in the list</li>
+                  <li><strong>Ctrl + K</strong>: Open the Quick Jump palette to search routes</li>
+                  <li><strong>Esc</strong>: Close the active Span Inspector panel or Modals</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

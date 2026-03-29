@@ -98,6 +98,7 @@ interface CompareViewProps {
   summaryA?: TraceSummary;
   summaryB?: TraceSummary;
   viewMode: TraceViewMode;
+  autoFocus?: boolean;
   onSetCompareA: (id?: string) => void;
   onSetCompareB: (id?: string) => void;
   onSwap: () => void;
@@ -105,7 +106,7 @@ interface CompareViewProps {
   onClose: () => void;
 }
 
-export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summaryA, summaryB, viewMode, onSetCompareA, onSetCompareB, onSwap, onReset, onClose }: CompareViewProps) {
+export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summaryA, summaryB, viewMode, autoFocus, onSetCompareA, onSetCompareB, onSwap, onReset, onClose }: CompareViewProps) {
   const spansA = useMemo(() => createSpanView(eventsA, viewMode), [eventsA, viewMode]);
   const spansB = useMemo(() => createSpanView(eventsB, viewMode), [eventsB, viewMode]);
 
@@ -260,6 +261,7 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
               summary={summaryA}
               viewMode={viewMode}
               mostlyInfraTrace={viewMode === 'business' && eventsA.length > 0 && nodesA.length === 0}
+              autoFocus={autoFocus}
             />
           ) : (
             <div className="compare-empty-state">
@@ -289,6 +291,7 @@ export function CompareView({ traces, traceAId, traceBId, eventsA, eventsB, summ
               summary={summaryB}
               viewMode={viewMode}
               mostlyInfraTrace={viewMode === 'business' && eventsB.length > 0 && nodesB.length === 0}
+              autoFocus={autoFocus}
             />
           ) : (
             <div className="compare-empty-state">

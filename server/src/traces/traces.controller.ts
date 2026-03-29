@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { TracingService } from '../common/tracing/tracing.service';
 import type { TraceEvent } from '../common/tracing/tracing.service';
 import { JaegerTracesService } from './jaeger-traces.service';
+import { TraceSummaryService } from './trace-summary.service';
 
 type TraceSource = 'memory' | 'jaeger' | 'hybrid';
 
@@ -11,7 +12,8 @@ export class TracesController {
 
   constructor(
     private tracing: TracingService,
-    private jaegerTraces: JaegerTracesService
+    private jaegerTraces: JaegerTracesService,
+    private traceSummary: TraceSummaryService
   ) {}
 
   @Get()
@@ -50,6 +52,11 @@ export class TracesController {
     } catch {
       return [];
     }
+  }
+
+  @Get(':traceId/summary')
+  async getSummary(@Param('traceId') traceId: string) {
+    return this.traceSummary.getTraceSummary(traceId);
   }
 
   @Get(':traceId')

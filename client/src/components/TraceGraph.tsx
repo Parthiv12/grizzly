@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import ReactFlow, { Background, Controls, MiniMap, type NodeProps, Position, Handle, type Edge, type Node, MarkerType, useReactFlow } from 'reactflow';
 import type { SpanViewModel, TraceSummary, TraceViewMode } from '../types/trace';
 import { formatDuration, formatTime, shortTraceId } from '../utils/format';
@@ -101,13 +101,22 @@ const nodeTypes = { traceNode: TraceNode, layerLabel: LayerLabelNode };
 function ViewFitter({ traceId, autoFocus, selectedNodeId, nodes }: { traceId?: string; autoFocus?: boolean; selectedNodeId?: string; nodes: Node[] }) {
   const { fitView, setCenter, getZoom } = useReactFlow();
   
+  // We useRef to track the nodes without adding them to the dependency array. 
+  // Otherwise, hover effects (which change node identity) cause infinite camera snapping!
+  const nodesRef = useRef(nodes);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
   useEffect(() => {
     if (!autoFocus) return;
 
     window.requestAnimationFrame(() => {
+      const currentNodes = nodesRef.current;
+      
       // If a node is explicitly selected, center on it
       if (selectedNodeId) {
-        const node = nodes.find(n => n.id === selectedNodeId);
+        const node = currentNodes.find(n => n.id === selectedNodeId);
         if (node && node.position) {
           setCenter(node.position.x + (node.width ?? 200)/2, node.position.y + (node.height ?? 80)/2, { zoom: getZoom(), duration: 600 });
           return;
@@ -115,12 +124,12 @@ function ViewFitter({ traceId, autoFocus, selectedNodeId, nodes }: { traceId?: s
       }
 
       // In compare mode, try to focus on divergence point or a changed node!
-      const divergenceNode = nodes.find(n => n.data?.diffInfo?.isDivergencePoint);
+      const divergenceNode = currentNodes.find(n => n.data?.diffInfo?.isDivergencePoint);
       if (divergenceNode && divergenceNode.position) {
         setCenter(divergenceNode.position.x + 100, divergenceNode.position.y + 40, { zoom: Math.max(0.8, getZoom()), duration: 600 });
         return;
       }
-      const topChangedNode = nodes.find(n => n.data?.comparisonState === 'changed' || n.data?.comparisonState === 'unique');
+      const topChangedNode = currentNodes.find(n => n.data?.comparisonState === 'changed' || n.data?.comparisonState === 'unique');
       if (topChangedNode && topChangedNode.position) {
         setCenter(topChangedNode.position.x + 100, topChangedNode.position.y + 40, { zoom: Math.max(0.8, getZoom()), duration: 600 });
         return;
@@ -129,7 +138,7 @@ function ViewFitter({ traceId, autoFocus, selectedNodeId, nodes }: { traceId?: s
       // Otherwise fit the whole graph for a new trace
       fitView({ duration: 600, padding: 0.1 });
     });
-  }, [traceId, selectedNodeId, autoFocus, fitView, setCenter, getZoom, nodes]);
+  }, [traceId, selectedNodeId, autoFocus, fitView, setCenter, getZoom]);
   
   return null;
 }

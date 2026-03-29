@@ -4,13 +4,13 @@ import * as https from 'node:https';
 import { URL } from 'node:url';
 import type { Layer, TraceEvent } from '../common/tracing/tracing.service';
 
-type JaegerTag = {
+export type JaegerTag = {
   key: string;
   type: string;
   value: string | number | boolean;
 };
 
-type JaegerSpan = {
+export type JaegerSpan = {
   traceID: string;
   spanID: string;
   operationName: string;
@@ -18,14 +18,15 @@ type JaegerSpan = {
   duration: number;
   processID: string;
   tags?: JaegerTag[];
+  references?: Array<{ refType: 'CHILD_OF' | 'FOLLOWS_FROM'; traceID: string; spanID: string }>;
 };
 
-type JaegerProcess = {
+export type JaegerProcess = {
   serviceName?: string;
   tags?: JaegerTag[];
 };
 
-type JaegerTrace = {
+export type JaegerTrace = {
   traceID: string;
   spans: JaegerSpan[];
   processes?: Record<string, JaegerProcess>;
@@ -58,6 +59,15 @@ export class JaegerTracesService {
     const url = new URL(`/api/traces/${traceId}`, this.baseUrl);
     const response = await this.getJson<JaegerResponse>(url);
     return this.mapTracesToEvents(response.data ?? [], resolvedServiceName).filter((event) => event.traceId === traceId);
+  }
+
+  async getRawTrace(traceId: string): Promise<JaegerTrace | undefined> {
+    const url = new URL(`/api/traces/${traceId}`, this.baseUrl);
+    const response = await this.getJson<JaegerResponse>(url);
+    if (!response.data || response.data.length === 0) {
+      return undefined;
+    }
+    return response.data[0];
   }
 
   async getServices(): Promise<string[]> {
