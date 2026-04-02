@@ -9,8 +9,8 @@ async function bootstrap() {
   await startTelemetry();
 
   const app = await NestFactory.create(AppModule);
-  app.enableCors(); // This opens port 3000 to Vercel!
-  
+  app.enableCors();
+
   const tracingService = app.get(TracingService);
   app.useGlobalInterceptors(new TracingInterceptor(tracingService));
 
@@ -23,8 +23,9 @@ async function bootstrap() {
   process.on('SIGINT', gracefulShutdown);
   process.on('SIGTERM', gracefulShutdown);
 
-  await app.listen(3000);
-  console.log('Server listening on http://localhost:3000');
+  const port = parseInt(process.env.PORT ?? '3000', 10);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Server listening on port ${port}`);
 }
 
 bootstrap();
