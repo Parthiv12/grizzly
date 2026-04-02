@@ -27,6 +27,9 @@ async function handleProductsRequest(
   handler: (meta: SpanMeta) => Promise<{ status: number; body: any }>
 ) {
   const meta: SpanMeta = {
+    layer: 'controller',
+    resource: 'products',
+    operation: 'request',
     httpMethod: req.method,
     httpUrl: req.originalUrl,
     httpRoute: routePath
@@ -36,7 +39,7 @@ async function handleProductsRequest(
     const result = await handler(meta);
     const span = trace.getActiveSpan();
     if (span) {
-       res.setHeader('x-trace-id', span.spanContext().traceId);
+      res.setHeader('x-trace-id', span.spanContext().traceId);
     }
     res.status(result.status).json(result.body);
   } catch (error: any) {

@@ -2,7 +2,6 @@ import type { QueryResultRow } from 'pg';
 import { withBusinessSpan } from '../observability/span-utils';
 import { pool } from './pool';
 import type { CreateIssueInput, Issue, IssueStatus, RequestTraceMeta } from '../types/issues';
-
 interface IssueRow extends QueryResultRow {
   id: string;
   title: string;
